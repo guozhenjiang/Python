@@ -1,0 +1,34 @@
+
+
+.. _example_plot_convex.py:
+
+
+Convex function
+================
+
+A figure showing the definition of a convex function
+
+
+
+.. rst-class:: horizontal
+
+
+    *
+
+      .. image:: images/plot_convex_2.png
+
+    *
+
+      .. image:: images/plot_convex_1.png
+
+
+
+
+**Python source code:** :download:`plot_convex.py <plot_convex.py>`
+
+.. literalinclude:: plot_convex.py
+    :lines: 7-
+
+**Total running time of the example:**  0.13 seconds
+( 0 minutes  0.13 seconds)
+    

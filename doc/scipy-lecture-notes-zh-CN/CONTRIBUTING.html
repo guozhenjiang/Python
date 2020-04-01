@@ -1,0 +1,297 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh_CN">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>帮助我们 &#8212; Scipy lecture notes</title>
+    
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '2016.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <script type="text/javascript" src="_static/translations.js"></script>
+    <link rel="top" title="Scipy lecture notes" href="index.html" />
+   
+    <link rel="stylesheet"
+	  href="http://yui.yahooapis.com/pure/0.6.0/base-min.css">
+
+<script type="text/javascript">
+$(function () {
+    // Highlight the table of content as we scroll
+    sections = {},
+    i        = 0,
+    url	 = document.URL.replace(/#.*$/, ""),
+    current_section = 0;
+
+    // Grab positions of our sections
+    $('.headerlink').each(function(){
+        sections[this.href.replace(url, '')] = $(this).offset().top - 50;
+    });
+
+    $(window).scroll(function(event) {
+	var pos   = $(window).scrollTop();
+
+	// Highlight the current section
+	$('a.internal').parent().removeClass('active');
+        for(i in sections){
+            if(sections[i] > pos){
+		break;
+            };
+	    if($('a.internal[href$="' + i + '"]').is(':visible')){
+		current_section = i;
+	    };
+        }
+	$('a.internal[href$="' + current_section + '"]').parent().addClass('active');
+	$('a.internal[href$="' + current_section + '"]').parent().parent().parent().addClass('active');
+	$('a.internal[href$="' + current_section + '"]').parent().parent().parent().parent().parent().addClass('active');
+    });
+
+});
+</script>
+
+
+  </head>
+  <body role="document">
+   <!-- Use the header to add javascript -->
+    
+
+    <script type="text/javascript">
+    // Function to collapse the tip divs
+    function collapse_tip_div(obj){
+	// Update the representation on the tip div based on whether it
+	// has the 'collapsed' css class or not: we only want to
+	// collapse divs that are not already collapsed
+	if($(obj).hasClass("collapsed")) {
+	} else {
+	    $(obj).find("p.summary").remove();
+	    var content = $(obj).text();
+	    var html = $(obj).html();
+
+	    if(content.length > 40) {
+		if ($.browser.msie) {
+		    // We start at '3' to avoid 'tip', as IE
+		    // does not count whitespace
+		    var content = content.substr(3, 50);
+		} else {
+		    // We start at '5' to avoid 'tip '
+		    var content = content.substr(5, 50);
+		}
+	    }
+	    $(obj).html('<p class="summary"><img src="_static/plus.png">' + content + '...</p>' + html);
+	}
+    }
+    </script>
+
+    <script type="text/javascript">
+    $(function () {
+	$(".tip")
+	    .click(function(event){
+		$(this).toggleClass("collapsed");
+		// Change state of the global button
+		$('div.related li.transparent').removeClass('transparent')
+		$(this).find("p.summary").remove();
+		if($(this).hasClass("collapsed")) {
+		    var content = $(this).text();
+		    var html = $(this).html();
+
+		    if(content.length > 40) {
+			if ($.browser.msie) {
+			    // We start at '3' to avoid 'tip', as IE
+			    // does not count whitespace
+			    var content = content.substr(3, 50);
+			} else {
+			    // We start at '5' to avoid 'tip '
+			    var content = content.substr(5, 50);
+			}
+		    }
+		    $(this).html('<p class="summary"><img src="_static/plus.png">' + content + '...</p>' + html);
+		}
+		if (event.target.tagName.toLowerCase() != "a") {
+                   return true; //Makes links clickable
+		}
+	});
+    });
+    </script>
+
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>导航</h3>
+      <ul>
+        <li class="nav-item nav-item-0"><a href="index.html">Scipy lecture notes</a> &#187;</li>
+     
+    <!-- Insert a menu in the navigation bar -->
+    <li class="left">
+	<!-- On click toggle the 'tip' on or off-->
+	<a onclick="$('.tip').each(function (index, obj) {
+			    collapse_tip_div(obj);
+		    });
+		    $('.tip').addClass('collapsed');
+		    $('.left').addClass('transparent');">
+	<img src="_static/minus.png"
+         alt="Collapse to compact view" style="padding: 1ex;"/>
+	<span class="hiddenlink">Collapse document to compact view</span>
+    </a></li>
+    <li class="right edit_on_github"><a href="https://github.com/jayleicn/scipy-lecture-notes-zh-CN/edit/master/CONTRIBUTING.rst">Edit
+    <span class="tooltip">
+	Improve this page:<br/>Translate/Improve it on Github.
+    </span>
+    </a>
+    </li>
+
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="id1">
+<h1>帮助我们<a class="headerlink" href="#id1" title="永久链接至标题">¶</a></h1>
+<div class="section" id="id2">
+<h2>编译指南<a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h2>
+<p>编译HTML格式文件, 输入:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">make</span> <span class="n">html</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>生成的HTML文件保存在 <code class="docutils literal"><span class="pre">build/html</span></code> 目录下</p>
+<p>首次编译耗时较长大致3~10分钟，这取决于编译平台的硬件配置及网络环境。由于第一次编译的信息缓存，随后的编译速度会稍快。</p>
+<p>生成PDF文档:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">make</span> <span class="n">pdf</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>生成过程中可能产生一些TeX相关的错误. 细微调整 <code class="docutils literal"><span class="pre">*.rst</span></code> 文档的排版通常有助于改善这些错误.</p>
+</div>
+<div class="section" id="id3">
+<h2>环境需求<a class="headerlink" href="#id3" title="永久链接至标题">¶</a></h2>
+<p><em>可能不完全</em></p>
+<ul class="simple">
+<li>make</li>
+<li>sphinx (&gt;= 1.0)</li>
+<li>pdflatex</li>
+<li>pdfjam</li>
+<li>matplotlib</li>
+<li>scikit-learn (&gt;= 0.8)</li>
+<li>scikit-image</li>
+<li>pandas</li>
+<li>seaborn</li>
+</ul>
+</div>
+<div class="section" id="ubuntu14-04-ltshtml">
+<h2>在ubuntu14.04 LTS上编译HTML (我的编译环境)<a class="headerlink" href="#ubuntu14-04-ltshtml" title="永久链接至标题">¶</a></h2>
+<ol class="arabic simple">
+<li>安装anaconda for Python 2.7, Linux 64-bit &lt;<a class="reference external" href="https://www.continuum.io/downloads">https://www.continuum.io/downloads</a>&gt;. (其他版本未经测试)</li>
+<li>添加anaconda/bin/目录到系统PATH变量中</li>
+<li>安装seaborn包  pip install seaborn</li>
+<li>切换至scipy-lecture-notes-zh-CN/目录下， make html</li>
+<li>在build/html文件夹下打开index.html</li>
+</ol>
+</div>
+<div class="section" id="fedora">
+<h2>在Fedora上编译 (原作者)<a class="headerlink" href="#fedora" title="永久链接至标题">¶</a></h2>
+<p>As root:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">yum</span> <span class="n">install</span> <span class="n">python</span> <span class="n">make</span> <span class="n">python</span><span class="o">-</span><span class="n">matplotlib</span> <span class="n">texlive</span><span class="o">-</span><span class="n">pdfjam</span> <span class="n">texlive</span> <span class="n">scipy</span> \
+<div class="newline"></div><span class="n">texlive</span><span class="o">-</span><span class="n">framed</span> <span class="n">texlive</span><span class="o">-</span><span class="n">threeparttable</span> <span class="n">texlive</span><span class="o">-</span><span class="n">wrapfig</span> <span class="n">texlive</span><span class="o">-</span><span class="n">multirow</span>
+<div class="newline"></div><span class="n">pip</span> <span class="n">install</span> <span class="n">Sphinx</span>
+<div class="newline"></div><span class="n">pip</span> <span class="n">install</span> <span class="n">Cython</span>
+<div class="newline"></div><span class="n">pip</span> <span class="n">install</span> <span class="n">scikit</span><span class="o">-</span><span class="n">learn</span>
+<div class="newline"></div><span class="n">pip</span> <span class="n">install</span> <span class="n">scikit</span><span class="o">-</span><span class="n">image</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id4">
+<h2>如何做出贡献<a class="headerlink" href="#id4" title="永久链接至标题">¶</a></h2>
+<p>如果你对翻译此文档感兴趣，请fork此仓库，在作出翻译之后向我pull request。 感谢!</p>
+<p><div style="clear: both"></div></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+	<div class="sidebartoc">
+  <h3><a href="index.html">內容目录</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">帮助我们</a><ul>
+<li><a class="reference internal" href="#id2">编译指南</a></li>
+<li><a class="reference internal" href="#id3">环境需求</a></li>
+<li><a class="reference internal" href="#ubuntu14-04-ltshtml">在ubuntu14.04 LTS上编译HTML (我的编译环境)</a></li>
+<li><a class="reference internal" href="#fedora">在Fedora上编译 (原作者)</a></li>
+<li><a class="reference internal" href="#id4">如何做出贡献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+    <div class="script_container">
+    <script>
+    (function() {
+	var cx = '004523248466141510607:hgv2yimrahw';
+	var gcse = document.createElement('script');
+	gcse.type = 'text/javascript';
+	gcse.async = true;
+	gcse.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') +
+	    '//cse.google.com/cse.js?cx=' + cx;
+	var s = document.getElementsByTagName('script')[0];
+	s.parentNode.insertBefore(gcse, s);
+    })();
+    </script>
+    <gcse:search></gcse:search>
+    </div>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>导航</h3>
+      <ul>
+        <li class="nav-item nav-item-0"><a href="index.html">Scipy lecture notes</a> &#187;</li>
+     
+    <!-- Insert a menu in the navigation bar -->
+    <li class="left">
+	<!-- On click toggle the 'tip' on or off-->
+	<a onclick="$('.tip').each(function (index, obj) {
+			    collapse_tip_div(obj);
+		    });
+		    $('.tip').addClass('collapsed');
+		    $('.left').addClass('transparent');">
+	<img src="_static/minus.png"
+         alt="Collapse to compact view" style="padding: 1ex;"/>
+	<span class="hiddenlink">Collapse document to compact view</span>
+    </a></li>
+    <li class="right edit_on_github"><a href="https://github.com/jayleicn/scipy-lecture-notes-zh-CN/edit/master/CONTRIBUTING.rst">Edit
+    <span class="tooltip">
+	Improve this page:<br/>Translate/Improve it on Github.
+    </span>
+    </a>
+    </li>
+
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016.
+      由 <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.6 创建。
+    </div>
+  </body>
+</html>

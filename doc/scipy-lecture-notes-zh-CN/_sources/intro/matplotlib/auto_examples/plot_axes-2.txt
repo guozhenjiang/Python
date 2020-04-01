@@ -1,0 +1,27 @@
+
+
+.. _example_plot_axes-2.py:
+
+
+Axes
+====
+
+This example shows various axes command to position matplotlib axes.
+
+
+
+
+.. image:: images/plot_axes-2_1.png
+    :align: center
+
+
+
+
+**Python source code:** :download:`plot_axes-2.py <plot_axes-2.py>`
+
+.. literalinclude:: plot_axes-2.py
+    :lines: 8-
+
+**Total running time of the example:**  0.15 seconds
+( 0 minutes  0.15 seconds)
+    

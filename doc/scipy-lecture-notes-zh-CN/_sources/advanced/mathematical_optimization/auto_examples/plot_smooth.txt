@@ -1,0 +1,34 @@
+
+
+.. _example_plot_smooth.py:
+
+
+Smooth vs non-smooth
+=====================
+
+Draws a figure to explain smooth versus non smooth optimization.
+
+
+
+.. rst-class:: horizontal
+
+
+    *
+
+      .. image:: images/plot_smooth_2.png
+
+    *
+
+      .. image:: images/plot_smooth_1.png
+
+
+
+
+**Python source code:** :download:`plot_smooth.py <plot_smooth.py>`
+
+.. literalinclude:: plot_smooth.py
+    :lines: 7-
+
+**Total running time of the example:**  0.14 seconds
+( 0 minutes  0.14 seconds)
+    

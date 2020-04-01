@@ -1,0 +1,42 @@
+
+
+.. _example_plot_exercise_ill_conditioned.py:
+
+
+Alternating optimization
+=========================
+
+The challenge here is that Hessian of the problem is a very
+ill-conditioned matrix. This can easily be seen, as the Hessian of the
+first term in simply 2*np.dot(K.T, K). Thus the conditioning of the
+problem can be judged from looking at the conditioning of K.
+
+
+
+.. image:: images/plot_exercise_ill_conditioned_1.png
+    :align: center
+
+
+**Script output**:
+
+.. rst-class:: max_height
+
+ ::
+
+    Powell: time 0.86s
+         BFGS: time 0.73s, x error 2.66, f error 266.22
+       L-BFGS: time 0.06s, x error 0.00, f error -0.00
+    BFGS w f': time 0.06s, x error 2.66, f error 266.22
+  L-BFGS w f': time 0.00s, x error 0.00, f error -0.00
+       Newton: time 0.01s, x error 2.66, f error 266.22
+
+
+
+**Python source code:** :download:`plot_exercise_ill_conditioned.py <plot_exercise_ill_conditioned.py>`
+
+.. literalinclude:: plot_exercise_ill_conditioned.py
+    :lines: 10-
+
+**Total running time of the example:**  2.11 seconds
+( 0 minutes  2.11 seconds)
+    

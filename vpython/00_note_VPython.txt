@@ -1,0 +1,18 @@
+发现：
+    室内定位项目准备动态绘制基站和标签的距离关系，百度 “python 球” 发现了：
+        http://muchong.com/html/201305/5951437.html
+        回答中 tompkins 提到了：
+            用Vpython
+            from visual import *
+            sphere()就可以了
+
+        接着百度 Vpython 发现了：
+            https://www.vpython.org/
+            https://vpython.org/contents/docs/primitives.html
+
+安装：
+    python -m pip install --user vpython
+        需要下载很多包，需要梯子
+
+测试：
+

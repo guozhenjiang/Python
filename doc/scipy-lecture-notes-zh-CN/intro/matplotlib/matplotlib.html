@@ -1,0 +1,1143 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh_CN">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1.4. Matplotlib: 绘图 &#8212; Scipy lecture notes</title>
+    
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2016.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/copybutton.js"></script>
+    <script type="text/javascript" src="../../_static/translations.js"></script>
+    <link rel="top" title="Scipy lecture notes" href="../../index.html" />
+    <link rel="up" title="1. 基础教程" href="../index.html" />
+    <link rel="next" title="1.5. Scipy : 高性能科学计算" href="../scipy.html" />
+    <link rel="prev" title="1.3.11. Some exercises" href="../numpy/exercises.html" />
+   
+    <link rel="stylesheet"
+	  href="http://yui.yahooapis.com/pure/0.6.0/base-min.css">
+
+<script type="text/javascript">
+$(function () {
+    // Highlight the table of content as we scroll
+    sections = {},
+    i        = 0,
+    url	 = document.URL.replace(/#.*$/, ""),
+    current_section = 0;
+
+    // Grab positions of our sections
+    $('.headerlink').each(function(){
+        sections[this.href.replace(url, '')] = $(this).offset().top - 50;
+    });
+
+    $(window).scroll(function(event) {
+	var pos   = $(window).scrollTop();
+
+	// Highlight the current section
+	$('a.internal').parent().removeClass('active');
+        for(i in sections){
+            if(sections[i] > pos){
+		break;
+            };
+	    if($('a.internal[href$="' + i + '"]').is(':visible')){
+		current_section = i;
+	    };
+        }
+	$('a.internal[href$="' + current_section + '"]').parent().addClass('active');
+	$('a.internal[href$="' + current_section + '"]').parent().parent().parent().addClass('active');
+	$('a.internal[href$="' + current_section + '"]').parent().parent().parent().parent().parent().addClass('active');
+    });
+
+});
+</script>
+
+
+  </head>
+  <body role="document">
+   <!-- Use the header to add javascript -->
+    
+
+    <script type="text/javascript">
+    // Function to collapse the tip divs
+    function collapse_tip_div(obj){
+	// Update the representation on the tip div based on whether it
+	// has the 'collapsed' css class or not: we only want to
+	// collapse divs that are not already collapsed
+	if($(obj).hasClass("collapsed")) {
+	} else {
+	    $(obj).find("p.summary").remove();
+	    var content = $(obj).text();
+	    var html = $(obj).html();
+
+	    if(content.length > 40) {
+		if ($.browser.msie) {
+		    // We start at '3' to avoid 'tip', as IE
+		    // does not count whitespace
+		    var content = content.substr(3, 50);
+		} else {
+		    // We start at '5' to avoid 'tip '
+		    var content = content.substr(5, 50);
+		}
+	    }
+	    $(obj).html('<p class="summary"><img src="../../_static/plus.png">' + content + '...</p>' + html);
+	}
+    }
+    </script>
+
+    <script type="text/javascript">
+    $(function () {
+	$(".tip")
+	    .click(function(event){
+		$(this).toggleClass("collapsed");
+		// Change state of the global button
+		$('div.related li.transparent').removeClass('transparent')
+		$(this).find("p.summary").remove();
+		if($(this).hasClass("collapsed")) {
+		    var content = $(this).text();
+		    var html = $(this).html();
+
+		    if(content.length > 40) {
+			if ($.browser.msie) {
+			    // We start at '3' to avoid 'tip', as IE
+			    // does not count whitespace
+			    var content = content.substr(3, 50);
+			} else {
+			    // We start at '5' to avoid 'tip '
+			    var content = content.substr(5, 50);
+			}
+		    }
+		    $(this).html('<p class="summary"><img src="../../_static/plus.png">' + content + '...</p>' + html);
+		}
+		if (event.target.tagName.toLowerCase() != "a") {
+                   return true; //Makes links clickable
+		}
+	});
+    });
+    </script>
+
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../scipy.html" title="1.5. Scipy : 高性能科学计算"
+             accesskey="N">下一页</a></li>
+        <li class="right" >
+          <a href="../numpy/exercises.html" title="1.3.11. Some exercises"
+             accesskey="P">上一页</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Scipy lecture notes</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">1. 基础教程</a> &#187;</li>
+     
+    <!-- Insert a menu in the navigation bar -->
+    <li class="left">
+	<!-- On click toggle the 'tip' on or off-->
+	<a onclick="$('.tip').each(function (index, obj) {
+			    collapse_tip_div(obj);
+		    });
+		    $('.tip').addClass('collapsed');
+		    $('.left').addClass('transparent');">
+	<img src="../../_static/minus.png"
+         alt="Collapse to compact view" style="padding: 1ex;"/>
+	<span class="hiddenlink">Collapse document to compact view</span>
+    </a></li>
+    <li class="right edit_on_github"><a href="https://github.com/jayleicn/scipy-lecture-notes-zh-CN/edit/master/intro/matplotlib/matplotlib.rst">Edit
+    <span class="tooltip">
+	Improve this page:<br/>Translate/Improve it on Github.
+    </span>
+    </a>
+    </li>
+
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="matplotlib">
+<span id="id1"></span><h1>1.4. Matplotlib: 绘图<a class="headerlink" href="#matplotlib" title="永久链接至标题">¶</a></h1>
+<div class="sidebar">
+<p class="first sidebar-title"><strong>致谢</strong></p>
+<p class="last">感谢 <strong>Bill Wing</strong> 和 <strong>Christoph Deil</strong> 对英文版给出的修订意见.</p>
+</div>
+<p><strong>作者</strong>: <em>Nicolas Rougier, Mike Müller, Gaël Varoquaux</em></p>
+<div class="contents local topic" id="chapter-contents">
+<p class="topic-title first">Chapter contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#id2" id="id23">简介</a></li>
+<li><a class="reference internal" href="#id3" id="id24">绘图基础</a></li>
+<li><a class="reference internal" href="#id12" id="id25">图形窗口，子图，轴线和刻度</a></li>
+<li><a class="reference internal" href="#id14" id="id26">其他种类的图形: 一些例子和练习</a></li>
+<li><a class="reference internal" href="#beyond-this-tutorial" id="id27">Beyond this tutorial</a></li>
+<li><a class="reference internal" href="#quick-references" id="id28">Quick references</a></li>
+</ul>
+</div>
+<div class="section" id="id2">
+<h2><a class="toc-backref" href="#id23">1.4.1. 简介</a><a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h2>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last"><a class="reference external" href="http://matplotlib.org/">Matplotlib</a> 是最常用的独立2维绘图库.
+它能够快速将数据可视化，并输出到多种格式的，高质量的图片。
+下面我们将会介绍一些常用的例子，它们将会涵盖大多数使用场景。</p>
+</div>
+<div class="section" id="ipython-matplotlib">
+<h3>1.4.1.1. IPython 和 matplotlib 模式<a class="headerlink" href="#ipython-matplotlib" title="永久链接至标题">¶</a></h3>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last"><a class="reference external" href="http://ipython.org/">IPython</a> 是一种强化的Python shell。</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">IPython 控制台:</th><td class="field-body">开启 IPython 控制台，加入命令行参数 <code class="docutils literal"><span class="pre">--matplotlib</span></code> (更老版本中是 <code class="docutils literal"><span class="pre">-pylab</span></code> ).</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">IPython notebook:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">在 IPython notebook 中插入 <a href="#id29"><span class="problematic" id="id30">`magic&lt;http://ipython.readthedocs.org/en/stable/interactive/magics.html&gt;`_</span></a>::
+%matplotlib inline</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="pyplot">
+<h3>1.4.1.2. pyplot<a class="headerlink" href="#pyplot" title="永久链接至标题">¶</a></h3>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">matplotlib的pyplot子库提供了和matlab类似的绘图API，方便用户快速绘制2D图表。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="id3">
+<h2><a class="toc-backref" href="#id24">1.4.2. 绘图基础</a><a class="headerlink" href="#id3" title="永久链接至标题">¶</a></h2>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p>这一节，我们将会在同一画布上绘制正余弦函数的图像。并且在之后逐步添加细节。</p>
+<p class="last">第一步，获取正余弦函数数据:</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="newline"></div><span class="n">C</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">X</span></code> 是一个 numpy 数组，包含从 -π 到 +π 的256个数据点 (包含端点).
+<code class="docutils literal"><span class="pre">C</span></code> 和 <code class="docutils literal"><span class="pre">S</span></code> 分别是相应的正余弦函数值。</p>
+<p>运行这个例子，你可以在命令行中输入:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ ipython --pylab
+<div class="newline"></div></pre></div>
+</div>
+<p>结果如下:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>IPython 0.13 -- An enhanced Interactive Python.
+<div class="newline"></div>?       -&gt; Introduction to IPython&#39;s features.
+<div class="newline"></div>%magic  -&gt; Information about IPython&#39;s &#39;magic&#39; % functions.
+<div class="newline"></div>help    -&gt; Python&#39;s own help system.
+<div class="newline"></div>object? -&gt; Details about &#39;object&#39;. ?object also works, ?? prints more.
+<div class="newline"></div>
+<div class="newline"></div>Welcome to pylab, a matplotlib-based Python environment.
+<div class="newline"></div>For more information, type &#39;help(pylab)&#39;.
+<div class="newline"></div></pre></div>
+</div>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p>你也可以在命令行下直接运行:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ python exercice_1.py
+<div class="newline"></div></pre></div>
+</div>
+<p class="last">点击相应的图片，可以获取相应代码。</p>
+</div>
+<div class="section" id="id4">
+<h3>1.4.2.1. 使用默认设置绘图。<a class="headerlink" href="#id4" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_1.html"><img alt="../../_images/plot_exercice_1_1.png" class="align-right" src="../../_images/plot_exercice_1_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">Matplotlib 图像高度可定制， 你可以更改 matplotlib 中几乎所有的设置:
+图像大小和分辨率，线的宽度，颜色和样式, 坐标轴, 插入文字和字体等等。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="newline"></div><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="newline"></div><span class="n">C</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">C</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id5">
+<h3>1.4.2.2. 实例化默认设置图像<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_2.html"><img alt="../../_images/plot_exercice_2_1.png" class="align-right" src="../../_images/plot_exercice_2_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<p>如下的代码可以绘制基于默认设置的图像。</p>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">这些设置被显示地设置为默认值。你可以交互式地探索这些特性 (参考 <a class="reference internal" href="#line-properties">Line properties</a> 和 <a class="reference internal" href="#line-styles">Line styles</a> ).</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="newline"></div><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Create a figure of size 8x6 inches, 80 dots per inch</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">80</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Create a new subplot from a grid of 1x1</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="newline"></div><span class="n">C</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Plot cosine with a blue continuous line of width 1 (pixels)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Plot sine with a green continuous line of width 1 (pixels)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Set x limits</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="o">-</span><span class="mf">4.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Set x ticks</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Set y limits</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Set y ticks</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Save figure using 72 dots per inch</span>
+<div class="newline"></div><span class="c1"># plt.savefig(&quot;exercice_2.png&quot;, dpi=72)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="c1"># Show result on screen</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id6">
+<h3>1.4.2.3. 改变线宽和颜色<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_3.html"><img alt="../../_images/plot_exercice_3_1.png" class="align-right" src="../../_images/plot_exercice_3_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">第一步，把余弦曲线改为蓝色，正弦曲线改为红色，并加粗。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">80</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>  <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id7">
+<h3>1.4.2.4. 设置坐标范围<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_4.html"><img alt="../../_images/plot_exercice_4_1.png" class="align-right" src="../../_images/plot_exercice_4_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">默认的坐标范围较小。为了清晰地呈现所有数据点，我们将坐标范围设置大一点。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">,</span> <span class="n">C</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">)</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id8">
+<h3>1.4.2.5. 设置坐标轴刻度<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_5.html"><img alt="../../_images/plot_exercice_5_1.png" class="align-right" src="../../_images/plot_exercice_5_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">现有的坐标轴没有（+/-π,+/-π/2) 刻度，通过以下代码设置这些坐标点：</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">([</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">])</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id9">
+<h3>1.4.2.6. 设置刻度标签<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_6.html"><img alt="../../_images/plot_exercice_6_1.png" class="align-right" src="../../_images/plot_exercice_6_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">现在刻度已经成功设置好了，但是我们想把3.142显式设置为 π 。
+为了做到这一点，在 &#8216;xticks()&#8217; 和 &#8216;yticks()&#8217; 中传入第二个参数列表.
+( 这里使用了latex公式，以便更加美观。 )</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">([</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">],</span>
+<div class="newline"></div>          <span class="p">[</span><span class="sa">r</span><span class="s1">&#39;$-\pi$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$-\pi/2$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$0$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$+\pi/2$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$+\pi$&#39;</span><span class="p">])</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">],</span>
+<div class="newline"></div>          <span class="p">[</span><span class="sa">r</span><span class="s1">&#39;$-1$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$0$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$+1$&#39;</span><span class="p">])</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="spines-tt">
+<h3>1.4.2.7. 移动轴线(spines,不知道怎么翻译TT)<a class="headerlink" href="#spines-tt" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_7.html"><img alt="../../_images/plot_exercice_7_1.png" class="align-right" src="../../_images/plot_exercice_7_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">Spines是连接坐标刻度和标记数据区域的线条. 它们可以被置于图形任意位置.
+我们现在把它们移动到图形中央位置。因为总共有4根线条(top/bottom/left/right),
+我们 top 和 right 两线条设置为无色，把 bottom 和 left 移动 0 坐标处。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>  <span class="c1"># gca stands for &#39;get current axis&#39;</span>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_ticks_position</span><span class="p">(</span><span class="s1">&#39;bottom&#39;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;bottom&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_position</span><span class="p">((</span><span class="s1">&#39;data&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">yaxis</span><span class="o">.</span><span class="n">set_ticks_position</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_position</span><span class="p">((</span><span class="s1">&#39;data&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id10">
+<h3>1.4.2.8. 添加图例<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_8.html"><img alt="../../_images/plot_exercice_8_1.png" class="align-right" src="../../_images/plot_exercice_8_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">通过在plot()中添加label参数，并设置legend(),在图形左上角图例。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;cosine&quot;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>  <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;sine&quot;</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">)</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="id11">
+<h3>1.4.2.9. 标注数据点<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_9.html"><img alt="../../_images/plot_exercice_9_1.png" class="align-right" src="../../_images/plot_exercice_9_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">通过 annotate() 在图形中添加注释。在正余弦曲线的 2π/3 处添加
+标注，首先在曲线相应位置打上记号，并记号点与坐标轴之间添加一条竖直虚线。
+接下来，使用 annotate() 添加带箭头的文字标注。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">t</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">3</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">)],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="p">],</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="p">],</span> <span class="mi">50</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$sin(\frac{2\pi}</span><span class="si">{3}</span><span class="s1">)=\frac{\sqrt</span><span class="si">{3}</span><span class="s1">}</span><span class="si">{2}</span><span class="s1">$&#39;</span><span class="p">,</span>
+<div class="newline"></div>             <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">)),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span>
+<div class="newline"></div>             <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="o">+</span><span class="mi">10</span><span class="p">,</span> <span class="o">+</span><span class="mi">30</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+<div class="newline"></div>             <span class="n">arrowprops</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">arrowstyle</span><span class="o">=</span><span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span> <span class="n">connectionstyle</span><span class="o">=</span><span class="s2">&quot;arc3,rad=.2&quot;</span><span class="p">))</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">)],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="p">],[</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="p">],</span> <span class="mi">50</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$cos(\frac{2\pi}</span><span class="si">{3}</span><span class="s1">)=-\frac</span><span class="si">{1}{2}</span><span class="s1">$&#39;</span><span class="p">,</span>
+<div class="newline"></div>             <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">)),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span>
+<div class="newline"></div>             <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">90</span><span class="p">,</span> <span class="o">-</span><span class="mi">50</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+<div class="newline"></div>             <span class="n">arrowprops</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">arrowstyle</span><span class="o">=</span><span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span> <span class="n">connectionstyle</span><span class="o">=</span><span class="s2">&quot;arc3,rad=.2&quot;</span><span class="p">))</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="devil-is-in-the-details">
+<h3>1.4.2.10. 细节决定成败 (Devil is in the details)<a class="headerlink" href="#devil-is-in-the-details" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_exercice_10.html"><img alt="../../_images/plot_exercice_10_1.png" class="align-right" src="../../_images/plot_exercice_10_1.png" style="width: 280.0px; height: 175.0px;" /></a>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">刻度标签因为线条的遮挡不易看清，通过改变字体大小和背景透明度可以
+线条和标签同时可见。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+<div class="newline"></div><span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_xticklabels</span><span class="p">()</span> <span class="o">+</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_yticklabels</span><span class="p">():</span>
+<div class="newline"></div>    <span class="n">label</span><span class="o">.</span><span class="n">set_fontsize</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+<div class="newline"></div>    <span class="n">label</span><span class="o">.</span><span class="n">set_bbox</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.65</span><span class="p">))</span>
+<div class="newline"></div><span class="o">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="id12">
+<h2><a class="toc-backref" href="#id25">1.4.3. 图形窗口，子图，轴线和刻度</a><a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h2>
+<dl class="docutils">
+<dt>matplotlib 中， <strong>&#8220;图形窗口(figure)&#8221;</strong> 是整个图形界面。其中可以包含一些</dt>
+<dd><strong>&#8220;子图(subplots)&#8221;</strong>.</dd>
+</dl>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p>以上，我们隐式地创建了图形窗格和坐标轴线，这提高了我们绘制图形的效率。
+我们也可以显示地设置两者的性质。在我们调用plot()的同时，matplotlib调用了</p>
+<blockquote>
+<div><code class="docutils literal"><span class="pre">gca()</span></code> 获取当前轴线， 接着 gca 调用 <code class="docutils literal"><span class="pre">gcf()</span></code> 获取当前图形窗口。</div></blockquote>
+<p class="last">当我们执行 <code class="docutils literal"><span class="pre">figure()</span></code> 命令时，严格来说，我们调用的是 <code class="docutils literal"><span class="pre">subplot(111)</span></code>。
+让我们来看看更多相关信息。</p>
+</div>
+<div class="section" id="id13">
+<h3>1.4.3.1. 图形窗口<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h3>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">图形窗口以 &#8220;Figure #&#8221; 命名. 并且从序号1开始 (这与Python中通常以 0 为计数起点的对象不同，带有明显的Matlab风格 )。 控制图形窗口的一些参数如下表所示:</p>
+</div>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p>默认值可在源文件中设置。
+As with other objects, you can set figure properties also setp or with the
+set_something methods.</p>
+<p class="last">除了点击图形窗口界面右上角的关闭按钮之外，你也可以使用 plt.close() 来关闭
+窗口：(1) 关闭当前窗口(不带参数)，
+(2) 关闭指定窗口 (以窗口序号或者图形实例作为参数)， (3) 关闭所有窗口
+(以 <code class="docutils literal"><span class="pre">&quot;all&quot;</span></code> 作为参数)。</p>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>     <span class="c1"># 关闭 figure 1</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="subplot">
+<h3>1.4.3.2. subplot<a class="headerlink" href="#subplot" title="永久链接至标题">¶</a></h3>
+<div class="admonition tip">
+<p class="first admonition-title">小技巧</p>
+<p class="last">通过 subplot ，你可以在坐标方格中设置图形的位置以及布局。
+<a class="reference external" href="http://matplotlib.org/users/gridspec.html">gridspec</a> 是
+另外一种更为强大的设置方法.</p>
+</div>
+<p><div style="clear: both"></div></p>
+<a class="reference external image-reference" href="auto_examples/plot_subplot-horizontal.html"><img alt="../../_images/plot_subplot-horizontal_1.png" src="../../_images/plot_subplot-horizontal_1.png" style="width: 168.0px; height: 112.0px;" /></a>
+<a class="reference external image-reference" href="auto_examples/plot_subplot-vertical.html"><img alt="../../_images/plot_subplot-vertical_1.png" src="../../_images/plot_subplot-vertical_1.png" style="width: 168.0px; height: 112.0px;" /></a>
+<a class="reference external image-reference" href="auto_examples/plot_subplot-grid.html"><img alt="../../_images/plot_subplot-grid_1.png" src="../../_images/plot_subplot-grid_1.png" style="width: 168.0px; height: 112.0px;" /></a>
+<a class="reference external image-reference" href="auto_examples/plot_gridspec.html"><img alt="../../_images/plot_gridspec_1.png" src="../../_images/plot_gridspec_1.png" style="width: 168.0px; height: 112.0px;" /></a>
+</div>
+<div class="section" id="axes">
+<h3>1.4.3.3. Axes<a class="headerlink" href="#axes" title="永久链接至标题">¶</a></h3>
+<p>Axes 和 subplot 十分相似，但是 axes 可以被置于 figure 任意位置。
+因此，如果我们想要在一个大的图表中插入一张小图表，可以使用 axes
+实现。</p>
+<a class="reference external image-reference" href="auto_examples/plot_axes.html"><img alt="../../_images/plot_axes_1.png" src="../../_images/plot_axes_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<a class="reference external image-reference" href="auto_examples/plot_axes-2.html"><img alt="../../_images/plot_axes-2_1.png" src="../../_images/plot_axes-2_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+</div>
+<div class="section" id="ticks">
+<h3>1.4.3.4. Ticks<a class="headerlink" href="#ticks" title="永久链接至标题">¶</a></h3>
+<p>良好的 tick 设置对于高质量的图表来说是必不可少的。在 Matplotlib 中可以方便设置tick的
+各种属性。
+tick locators 标明 tick 的位置，tick formatters 标明 tick 的外观，并且主次刻度可以相互独立地设置各自的属性。</p>
+<div class="section" id="tick-locators">
+<h4>1.4.3.4.1. Tick Locators<a class="headerlink" href="#tick-locators" title="永久链接至标题">¶</a></h4>
+<p>Tick locators 用于控制tick的位置，按如下方法设置:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="n">locator</span><span class="p">))</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>常用的一些locator如下:</p>
+<a class="reference external image-reference" href="auto_examples/plot_ticks.html"><img alt="../../_images/plot_ticks_1.png" src="../../_images/plot_ticks_1.png" style="width: 426.6px; height: 232.8px;" /></a>
+<p>所有的locator都继承自 <a class="reference external" href="http://matplotlib.org/api/ticker_api.html#matplotlib.ticker.Locator" title="(在 Matplotlib v2.0.0)"><code class="xref py py-class docutils literal"><span class="pre">matplotlib.ticker.Locator</span></code></a> 这个基类，你可以通过继承它来实现自己的locator。
+使用日期作为locator是一件麻烦事，matplotlib 为此提供了一些特殊的locator, matplotlib.dates.</p>
+</div>
+</div>
+</div>
+<div class="section" id="id14">
+<h2><a class="toc-backref" href="#id26">1.4.4. 其他种类的图形: 一些例子和练习</a><a class="headerlink" href="#id14" title="永久链接至标题">¶</a></h2>
+<a href="#id31"><span class="problematic" id="id32"></span></a><a href="#id33"><span class="problematic" id="id34"></span></a><a href="#id35"><span class="problematic" id="id36"></span></a><a href="#id37"><span class="problematic" id="id38"></span></a><a class="reference internal image-reference" href="#imshow"><img alt="intro/matplotlib/auto_examples/images/plot_imshow_1.png" src="intro/matplotlib/auto_examples/images/plot_imshow_1.png" /></a>
+<a href="#id39"><span class="problematic" id="id40"></span></a><a href="#id41"><span class="problematic" id="id42"></span></a><a href="#id43"><span class="problematic" id="id44"></span></a><a class="reference internal image-reference" href="#multi-plots"><img alt="intro/matplotlib/auto_examples/images/plot_multiplot_1.png" src="intro/matplotlib/auto_examples/images/plot_multiplot_1.png" /></a>
+<a class="reference internal image-reference" href="#polar-axis"><img alt="intro/matplotlib/auto_examples/images/plot_polar_1.png" src="intro/matplotlib/auto_examples/images/plot_polar_1.png" /></a>
+<a class="reference internal image-reference" href="#d-plots"><img alt="intro/matplotlib/auto_examples/images/plot_plot3d_1.png" src="intro/matplotlib/auto_examples/images/plot_plot3d_1.png" /></a>
+<a class="reference internal image-reference" href="#text"><img alt="intro/matplotlib/auto_examples/images/plot_text_1.png" src="intro/matplotlib/auto_examples/images/plot_text_1.png" /></a>
+<div class="section" id="id15">
+<h3>1.4.4.1. 常见图像<a class="headerlink" href="#id15" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_plot_ex.html"><img alt="../../_images/plot_plot_ex_1.png" class="align-right" src="../../_images/plot_plot_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">需使用 <a class="reference external" href="http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.fill_between">fill_between</a>
+命令.</p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像，你需要注意图片的填充域:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">256</span>
+<div class="newline"></div><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="newline"></div><span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.00</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.00</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="id16">
+<h3>1.4.4.2. 散点图<a class="headerlink" href="#id16" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_scatter_ex.html"><img alt="../../_images/plot_scatter_ex_1.png" class="align-right" src="../../_images/plot_scatter_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">颜色由(X,Y)角度决定。</p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像，你需要主义 marker 大小，色彩和透明度。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">1024</span>
+<div class="newline"></div><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
+<div class="newline"></div><span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">Y</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="id17">
+<h3>1.4.4.3. 条形图<a class="headerlink" href="#id17" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_bar_ex.html"><img alt="../../_images/plot_bar_ex_1.png" class="align-right" src="../../_images/plot_bar_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">注意对其文字。</p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">12</span>
+<div class="newline"></div><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+<div class="newline"></div><span class="n">Y1</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">X</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<div class="newline"></div><span class="n">Y2</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">X</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="o">+</span><span class="n">Y1</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;#9999ff&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="o">-</span><span class="n">Y2</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;#ff9999&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y1</span><span class="p">):</span>
+<div class="newline"></div>    <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">%.2f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">y</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">1.25</span><span class="p">,</span> <span class="o">+</span><span class="mf">1.25</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="id18">
+<h3>1.4.4.4. 等高线<a class="headerlink" href="#id18" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_contour_ex.html"><img alt="../../_images/plot_contour_ex_1.png" class="align-right" src="../../_images/plot_contour_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">需使用 <a class="reference external" href="http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.clabel">clabel</a>
+命令.</p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像，你需要注意 colormap (see <a class="reference internal" href="#colormaps">Colormaps</a> below).</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<div class="newline"></div>    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">5</span> <span class="o">+</span> <span class="n">y</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span><span class="n">y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">n</span> <span class="o">=</span> <span class="mi">256</span>
+<div class="newline"></div><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<div class="newline"></div><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<div class="newline"></div><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">),</span> <span class="mi">8</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">75</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">)</span>
+<div class="newline"></div><span class="n">C</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">),</span> <span class="mi">8</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=.</span><span class="mi">5</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="imshow">
+<h3>1.4.4.5. Imshow<a class="headerlink" href="#imshow" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_imshow_ex.html"><img alt="../../_images/plot_imshow_ex_1.png" class="align-right" src="../../_images/plot_imshow_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">你需要注意图像的 <code class="docutils literal"><span class="pre">origin</span></code> ，并添加 <a class="reference external" href="http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.colorbar">colorbar</a></p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<div class="newline"></div>    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">5</span> <span class="o">+</span> <span class="n">y</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>
+<div class="newline"></div><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
+<div class="newline"></div><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
+<div class="newline"></div><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="id19">
+<h3>1.4.4.6. 饼图<a class="headerlink" href="#id19" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_pie_ex.html"><img alt="../../_images/plot_pie_ex_1.png" class="align-right" src="../../_images/plot_pie_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">你需要更改 Z.</p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像，注意切片大小和色彩。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">pie</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="id20">
+<h3>1.4.4.7. 箭头图<a class="headerlink" href="#id20" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_quiver_ex.html"><img alt="../../_images/plot_quiver_ex_1.png" class="align-right" src="../../_images/plot_quiver_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">需要画两次箭头。</p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像，注意箭头指向和色彩。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">8</span>
+<div class="newline"></div><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">n</span><span class="p">]</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">quiver</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="id21">
+<h3>1.4.4.8. 坐标网格<a class="headerlink" href="#id21" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_grid_ex.html"><img alt="../../_images/plot_grid_ex_1.png" class="align-right" src="../../_images/plot_grid_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<p>参考如下代码，尝试画出右侧的图像,注意线形。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<div class="newline"></div><span class="n">axes</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<div class="newline"></div><span class="n">axes</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<div class="newline"></div><span class="n">axes</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([])</span>
+<div class="newline"></div><span class="n">axes</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([])</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="multi-plots">
+<h3>1.4.4.9. Multi Plots<a class="headerlink" href="#multi-plots" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_multiplot_ex.html"><img alt="../../_images/plot_multiplot_ex_1.png" class="align-right" src="../../_images/plot_multiplot_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">可以使用多个subplots来</p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<div class="newline"></div><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="polar-axis">
+<h3>1.4.4.10. Polar Axis<a class="headerlink" href="#polar-axis" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_polar_ex.html"><img alt="../../_images/plot_polar_ex_1.png" class="align-right" src="../../_images/plot_polar_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">只需更改 <code class="docutils literal"><span class="pre">axes</span></code></p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">axes</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">N</span> <span class="o">=</span> <span class="mi">20</span>
+<div class="newline"></div><span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">N</span><span class="p">)</span>
+<div class="newline"></div><span class="n">radii</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+<div class="newline"></div><span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+<div class="newline"></div><span class="n">bars</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">radii</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">bar</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">radii</span><span class="p">,</span> <span class="n">bars</span><span class="p">):</span>
+<div class="newline"></div>    <span class="n">bar</span><span class="o">.</span><span class="n">set_facecolor</span><span class="p">(</span><span class="n">cm</span><span class="o">.</span><span class="n">jet</span><span class="p">(</span><span class="n">r</span> <span class="o">/</span> <span class="mf">10.</span><span class="p">))</span>
+<div class="newline"></div>    <span class="n">bar</span><span class="o">.</span><span class="n">set_alpha</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码</p>
+</div>
+<div class="section" id="d-plots">
+<h3>1.4.4.11. 3D Plots<a class="headerlink" href="#d-plots" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_plot3d_ex.html"><img alt="../../_images/plot_plot3d_ex_1.png" class="align-right" src="../../_images/plot_plot3d_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">你需要使用 <a class="reference external" href="http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.contourf">contourf</a></p>
+</div>
+<p>参考如下代码，尝试画出右侧的图像。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mpl_toolkits.mplot3d</span> <span class="k">import</span> <span class="n">Axes3D</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<div class="newline"></div><span class="n">ax</span> <span class="o">=</span> <span class="n">Axes3D</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+<div class="newline"></div><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span>
+<div class="newline"></div><span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span>
+<div class="newline"></div><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+<div class="newline"></div><span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">X</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">Y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+<div class="newline"></div><span class="n">Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="n">ax</span><span class="o">.</span><span class="n">plot_surface</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">rstride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cstride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;hot&#39;</span><span class="p">)</span>
+<div class="newline"></div></pre></div>
+</div>
+<p>点击图片获取源码。</p>
+<div class="admonition seealso">
+<p class="first admonition-title">参见</p>
+<p class="last"><a class="reference internal" href="../../packages/3d_plotting/index.html#mayavi-label"><span class="std std-ref">3D plotting with Mayavi</span></a></p>
+</div>
+</div>
+<div class="section" id="text">
+<h3>1.4.4.12. Text<a class="headerlink" href="#text" title="永久链接至标题">¶</a></h3>
+<a class="reference external image-reference" href="auto_examples/plot_text_ex.html"><img alt="../../_images/plot_text_ex_1.png" class="align-right" src="../../_images/plot_text_ex_1.png" style="width: 280.0px; height: 210.0px;" /></a>
+<div class="admonition hint">
+<p class="first admonition-title">提示</p>
+<p class="last">想知道 <a class="reference external" href="http://matplotlib.org/examples/api/logo2.html">matplotlib logo</a> 是怎么制作的？</p>
+</div>
+<p>点击图片获取源码。</p>
+<hr class="docutils" />
+<div class="topic">
+<p class="topic-title first"><strong>Quick read</strong></p>
+<p>对于想要快速浏览Scipy lectures 的读者，你可以直接跳到下一节:
+<a class="reference internal" href="../scipy.html#scipy"><span class="std std-ref">Scipy : 高性能科学计算</span></a>.</p>
+<p>这一节余下的部分不是必须学习的内容。但是我们仍然希望你能阅读下面的内容，它们会对你有所帮助。</p>
+</div>
+</div>
+</div>
+<div class="section" id="beyond-this-tutorial">
+<h2><a class="toc-backref" href="#id27">1.4.5. Beyond this tutorial</a><a class="headerlink" href="#beyond-this-tutorial" title="永久链接至标题">¶</a></h2>
+<p>Matplotlib 拥有众多的帮助文档，下面给出了一些可能对大家有所帮助的文档链接:</p>
+<div class="section" id="tutorials">
+<h3>1.4.5.1. Tutorials<a class="headerlink" href="#tutorials" title="永久链接至标题">¶</a></h3>
+<table class="hlist"><tr><td><ul class="simple">
+<li><a class="reference external" href="http://matplotlib.org/users/pyplot_tutorial.html">Pyplot tutorial</a><ul>
+<li>Introduction</li>
+<li>Controlling line properties</li>
+<li>Working with multiple figures and axes</li>
+<li>Working with text</li>
+</ul>
+</li>
+<li><a class="reference external" href="http://matplotlib.org/users/image_tutorial.html">Image tutorial</a><ul>
+<li>Startup commands</li>
+<li>Importing image data into Numpy arrays</li>
+<li>Plotting numpy arrays as images</li>
+</ul>
+</li>
+<li><a class="reference external" href="http://matplotlib.org/users/index_text.html">Text tutorial</a><ul>
+<li>Text introduction</li>
+<li>Basic text commands</li>
+<li>Text properties and layout</li>
+<li>Writing mathematical expressions</li>
+<li>Text rendering With LaTeX</li>
+<li>Annotating text</li>
+</ul>
+</li>
+</ul>
+</td><td><ul class="simple">
+<li><a class="reference external" href="http://matplotlib.org/users/artists.html">Artist tutorial</a><ul>
+<li>Introduction</li>
+<li>Customizing your objects</li>
+<li>Object containers</li>
+<li>Figure container</li>
+<li>Axes container</li>
+<li>Axis containers</li>
+<li>Tick containers</li>
+</ul>
+</li>
+<li><a class="reference external" href="http://matplotlib.org/users/path_tutorial.html">Path tutorial</a><ul>
+<li>Introduction</li>
+<li>Bézier example</li>
+<li>Compound paths</li>
+</ul>
+</li>
+<li><a class="reference external" href="http://matplotlib.org/users/transforms_tutorial.html">Transforms tutorial</a><ul>
+<li>Introduction</li>
+<li>Data coordinates</li>
+<li>Axes coordinates</li>
+<li>Blended transformations</li>
+<li>Using offset transforms to create a shadow effect</li>
+<li>The transformation pipeline</li>
+</ul>
+</li>
+</ul>
+</td></tr></table>
+</div>
+<div class="section" id="matplotlib-documentation">
+<h3>1.4.5.2. Matplotlib documentation<a class="headerlink" href="#matplotlib-documentation" title="永久链接至标题">¶</a></h3>
+<ul class="simple">
+<li><a class="reference external" href="http://matplotlib.org/users/index.html">用户手册</a></li>
+<li><a class="reference external" href="http://matplotlib.org/faq/index.html">FAQ</a><ul>
+<li>Installation</li>
+<li>Usage</li>
+<li>How-To</li>
+<li>Troubleshooting</li>
+<li>Environment Variables</li>
+</ul>
+</li>
+<li><a class="reference external" href="http://matplotlib.org/users/screenshots.html">Screenshots</a></li>
+</ul>
+</div>
+<div class="section" id="code-documentation">
+<h3>1.4.5.3. Code documentation<a class="headerlink" href="#code-documentation" title="永久链接至标题">¶</a></h3>
+<p>在python会话中，你可以很方便地查看源码文档:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="newline"></div><span class="gp">&gt;&gt;&gt; </span><span class="n">help</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">)</span>    
+<div class="newline"></div><span class="go">Help on function plot in module matplotlib.pyplot:</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="go">plot(*args, **kwargs)</span>
+<div class="newline"></div><span class="go">   Plot lines and/or markers to the</span>
+<div class="newline"></div><span class="go">   :class:`~matplotlib.axes.Axes`.  *args* is a variable length</span>
+<div class="newline"></div><span class="go">   argument, allowing for multiple *x*, *y* pairs with an</span>
+<div class="newline"></div><span class="go">   optional format string.  For example, each of the following is</span>
+<div class="newline"></div><span class="go">   legal::</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="go">       plot(x, y)         # plot x and y using default line style and color</span>
+<div class="newline"></div><span class="go">       plot(x, y, &#39;bo&#39;)   # plot x and y using blue circle markers</span>
+<div class="newline"></div><span class="go">       plot(y)            # plot y using x as index array 0..N-1</span>
+<div class="newline"></div><span class="go">       plot(y, &#39;r+&#39;)      # ditto, but with red plusses</span>
+<div class="newline"></div>
+<div class="newline"></div><span class="go">   If *x* and/or *y* is 2-dimensional, then the corresponding columns</span>
+<div class="newline"></div><span class="go">   will be plotted.</span>
+<div class="newline"></div><span class="gp">...</span>
+<div class="newline"></div></pre></div>
+</div>
+</div>
+<div class="section" id="galleries">
+<h3>1.4.5.4. Galleries<a class="headerlink" href="#galleries" title="永久链接至标题">¶</a></h3>
+<p>当你想知道一些图表是怎么绘制的时候，查询 <a class="reference external" href="http://matplotlib.org/gallery.html">matplotlib gallery</a>
+是一个不错的选择。</p>
+</div>
+<div class="section" id="mailing-lists">
+<h3>1.4.5.5. Mailing lists<a class="headerlink" href="#mailing-lists" title="永久链接至标题">¶</a></h3>
+<p>通过用户邮件列表 <a class="reference external" href="https://mail.python.org/mailman/listinfo/matplotlib-users">user mailing list</a> 和开发者邮件列表 <a class="reference external" href="https://mail.python.org/mailman/listinfo/matplotlib-devel">developers mailing list</a> 获取帮助。</p>
+</div>
+</div>
+<div class="section" id="quick-references">
+<h2><a class="toc-backref" href="#id28">1.4.6. Quick references</a><a class="headerlink" href="#quick-references" title="永久链接至标题">¶</a></h2>
+<p>这里给出一些常用的参考信息</p>
+<div class="section" id="line-properties">
+<h3>1.4.6.1. Line properties<a class="headerlink" href="#line-properties" title="永久链接至标题">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="30%" />
+<col width="50%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">属性</th>
+<th class="head">描述</th>
+<th class="head">示例</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>alpha (or a)</td>
+<td>透明度，值 0-1</td>
+<td><img alt="../../_images/plot_alpha_1.png" class="first last" src="../../_images/plot_alpha_1.png" />
+</td>
+</tr>
+<tr class="row-odd"><td>antialiased</td>
+<td>抗锯齿，值为 True 或者 False</td>
+<td><img alt="../../_images/plot_aliased_1.png" class="first" src="../../_images/plot_aliased_1.png" />
+<img alt="../../_images/plot_antialiased_1.png" class="last" src="../../_images/plot_antialiased_1.png" />
+</td>
+</tr>
+<tr class="row-even"><td>color (or c)</td>
+<td>颜色</td>
+<td><img alt="../../_images/plot_color_1.png" class="first last" src="../../_images/plot_color_1.png" />
+</td>
+</tr>
+<tr class="row-odd"><td>linestyle (or ls)</td>
+<td>见 <a class="reference internal" href="#line-properties">Line properties</a></td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>linewidth (or lw)</td>
+<td>线宽，值为浮点数</td>
+<td><img alt="../../_images/plot_linewidth_1.png" class="first last" src="../../_images/plot_linewidth_1.png" />
+</td>
+</tr>
+<tr class="row-odd"><td>solid_capstyle</td>
+<td>实线端点样式</td>
+<td><img alt="../../_images/plot_solid_capstyle_1.png" class="first last" src="../../_images/plot_solid_capstyle_1.png" />
+</td>
+</tr>
+<tr class="row-even"><td>solid_joinstyle</td>
+<td>实线连接处样式</td>
+<td><img alt="../../_images/plot_solid_joinstyle_1.png" class="first last" src="../../_images/plot_solid_joinstyle_1.png" />
+</td>
+</tr>
+<tr class="row-odd"><td>dash_capstyle</td>
+<td>虚线端点样式</td>
+<td><img alt="../../_images/plot_dash_capstyle_1.png" class="first last" src="../../_images/plot_dash_capstyle_1.png" />
+</td>
+</tr>
+<tr class="row-even"><td>dash_joinstyle</td>
+<td>虚线连接处样式</td>
+<td><img alt="../../_images/plot_dash_joinstyle_1.png" class="first last" src="../../_images/plot_dash_joinstyle_1.png" />
+</td>
+</tr>
+<tr class="row-odd"><td>记号</td>
+<td>见 <a class="reference internal" href="#markers">Markers</a></td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>markeredgewidth (mew)</td>
+<td>记号边缘线宽</td>
+<td><img alt="../../_images/plot_mew_1.png" class="first last" src="../../_images/plot_mew_1.png" />
+</td>
+</tr>
+<tr class="row-odd"><td>markeredgecolor (mec)</td>
+<td>记号边缘线条颜色</td>
+<td><img alt="../../_images/plot_mec_1.png" class="first last" src="../../_images/plot_mec_1.png" />
+</td>
+</tr>
+<tr class="row-even"><td>markerfacecolor (mfc)</td>
+<td>记号中心颜色</td>
+<td><img alt="../../_images/plot_mfc_1.png" class="first last" src="../../_images/plot_mfc_1.png" />
+</td>
+</tr>
+<tr class="row-odd"><td>markersize (ms)</td>
+<td>记号大小</td>
+<td><img alt="../../_images/plot_ms_1.png" class="first last" src="../../_images/plot_ms_1.png" />
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="line-styles">
+<h3>1.4.6.2. Line styles<a class="headerlink" href="#line-styles" title="永久链接至标题">¶</a></h3>
+<img alt="../../_images/plot_linestyles_1.png" src="../../_images/plot_linestyles_1.png" />
+</div>
+<div class="section" id="markers">
+<h3>1.4.6.3. Markers<a class="headerlink" href="#markers" title="永久链接至标题">¶</a></h3>
+<a class="reference internal image-reference" href="../../_images/plot_markers_1.png"><img alt="../../_images/plot_markers_1.png" src="../../_images/plot_markers_1.png" style="width: 799.2px; height: 374.4px;" /></a>
+</div>
+<div class="section" id="colormaps">
+<h3>1.4.6.4. Colormaps<a class="headerlink" href="#colormaps" title="永久链接至标题">¶</a></h3>
+<p>colormaps中所有的颜色都可以通过添加 <code class="docutils literal"><span class="pre">_r</span></code> 后缀获取与其对立的颜色.
+例如， <code class="docutils literal"><span class="pre">gray_r</span></code> 代表与 <code class="docutils literal"><span class="pre">gray</span></code> 相反的颜色。</p>
+<p>更多关于colormaps的信息，参见 <a class="reference external" href="intro/matplotlib/matplotlib.rst">Documenting the matplotlib
+colormaps</a>.</p>
+<a class="reference internal image-reference" href="../../_images/plot_colormaps_1.png"><img alt="../../_images/plot_colormaps_1.png" src="../../_images/plot_colormaps_1.png" style="width: 800.0px; height: 400.0px;" /></a>
+<p><div style="clear: both"></div></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+	<div class="sidebartoc">
+  <h3><a href="../../index.html">內容目录</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1.4. Matplotlib: 绘图</a><ul>
+<li><a class="reference internal" href="#id2">1.4.1. 简介</a><ul>
+<li><a class="reference internal" href="#ipython-matplotlib">1.4.1.1. IPython 和 matplotlib 模式</a></li>
+<li><a class="reference internal" href="#pyplot">1.4.1.2. pyplot</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id3">1.4.2. 绘图基础</a><ul>
+<li><a class="reference internal" href="#id4">1.4.2.1. 使用默认设置绘图。</a></li>
+<li><a class="reference internal" href="#id5">1.4.2.2. 实例化默认设置图像</a></li>
+<li><a class="reference internal" href="#id6">1.4.2.3. 改变线宽和颜色</a></li>
+<li><a class="reference internal" href="#id7">1.4.2.4. 设置坐标范围</a></li>
+<li><a class="reference internal" href="#id8">1.4.2.5. 设置坐标轴刻度</a></li>
+<li><a class="reference internal" href="#id9">1.4.2.6. 设置刻度标签</a></li>
+<li><a class="reference internal" href="#spines-tt">1.4.2.7. 移动轴线(spines,不知道怎么翻译TT)</a></li>
+<li><a class="reference internal" href="#id10">1.4.2.8. 添加图例</a></li>
+<li><a class="reference internal" href="#id11">1.4.2.9. 标注数据点</a></li>
+<li><a class="reference internal" href="#devil-is-in-the-details">1.4.2.10. 细节决定成败 (Devil is in the details)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id12">1.4.3. 图形窗口，子图，轴线和刻度</a><ul>
+<li><a class="reference internal" href="#id13">1.4.3.1. 图形窗口</a></li>
+<li><a class="reference internal" href="#subplot">1.4.3.2. subplot</a></li>
+<li><a class="reference internal" href="#axes">1.4.3.3. Axes</a></li>
+<li><a class="reference internal" href="#ticks">1.4.3.4. Ticks</a><ul>
+<li><a class="reference internal" href="#tick-locators">1.4.3.4.1. Tick Locators</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id14">1.4.4. 其他种类的图形: 一些例子和练习</a><ul>
+<li><a class="reference internal" href="#id15">1.4.4.1. 常见图像</a></li>
+<li><a class="reference internal" href="#id16">1.4.4.2. 散点图</a></li>
+<li><a class="reference internal" href="#id17">1.4.4.3. 条形图</a></li>
+<li><a class="reference internal" href="#id18">1.4.4.4. 等高线</a></li>
+<li><a class="reference internal" href="#imshow">1.4.4.5. Imshow</a></li>
+<li><a class="reference internal" href="#id19">1.4.4.6. 饼图</a></li>
+<li><a class="reference internal" href="#id20">1.4.4.7. 箭头图</a></li>
+<li><a class="reference internal" href="#id21">1.4.4.8. 坐标网格</a></li>
+<li><a class="reference internal" href="#multi-plots">1.4.4.9. Multi Plots</a></li>
+<li><a class="reference internal" href="#polar-axis">1.4.4.10. Polar Axis</a></li>
+<li><a class="reference internal" href="#d-plots">1.4.4.11. 3D Plots</a></li>
+<li><a class="reference internal" href="#text">1.4.4.12. Text</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#beyond-this-tutorial">1.4.5. Beyond this tutorial</a><ul>
+<li><a class="reference internal" href="#tutorials">1.4.5.1. Tutorials</a></li>
+<li><a class="reference internal" href="#matplotlib-documentation">1.4.5.2. Matplotlib documentation</a></li>
+<li><a class="reference internal" href="#code-documentation">1.4.5.3. Code documentation</a></li>
+<li><a class="reference internal" href="#galleries">1.4.5.4. Galleries</a></li>
+<li><a class="reference internal" href="#mailing-lists">1.4.5.5. Mailing lists</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#quick-references">1.4.6. Quick references</a><ul>
+<li><a class="reference internal" href="#line-properties">1.4.6.1. Line properties</a></li>
+<li><a class="reference internal" href="#line-styles">1.4.6.2. Line styles</a></li>
+<li><a class="reference internal" href="#markers">1.4.6.3. Markers</a></li>
+<li><a class="reference internal" href="#colormaps">1.4.6.4. Colormaps</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+    <div class="script_container">
+    <script>
+    (function() {
+	var cx = '004523248466141510607:hgv2yimrahw';
+	var gcse = document.createElement('script');
+	gcse.type = 'text/javascript';
+	gcse.async = true;
+	gcse.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') +
+	    '//cse.google.com/cse.js?cx=' + cx;
+	var s = document.getElementsByTagName('script')[0];
+	s.parentNode.insertBefore(gcse, s);
+    })();
+    </script>
+    <gcse:search></gcse:search>
+    </div>
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../scipy.html" title="1.5. Scipy : 高性能科学计算"
+             >下一页</a></li>
+        <li class="right" >
+          <a href="../numpy/exercises.html" title="1.3.11. Some exercises"
+             >上一页</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Scipy lecture notes</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >1. 基础教程</a> &#187;</li>
+     
+    <!-- Insert a menu in the navigation bar -->
+    <li class="left">
+	<!-- On click toggle the 'tip' on or off-->
+	<a onclick="$('.tip').each(function (index, obj) {
+			    collapse_tip_div(obj);
+		    });
+		    $('.tip').addClass('collapsed');
+		    $('.left').addClass('transparent');">
+	<img src="../../_static/minus.png"
+         alt="Collapse to compact view" style="padding: 1ex;"/>
+	<span class="hiddenlink">Collapse document to compact view</span>
+    </a></li>
+    <li class="right edit_on_github"><a href="https://github.com/jayleicn/scipy-lecture-notes-zh-CN/edit/master/intro/matplotlib/matplotlib.rst">Edit
+    <span class="tooltip">
+	Improve this page:<br/>Translate/Improve it on Github.
+    </span>
+    </a>
+    </li>
+
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016.
+      由 <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.6 创建。
+    </div>
+  </body>
+</html>

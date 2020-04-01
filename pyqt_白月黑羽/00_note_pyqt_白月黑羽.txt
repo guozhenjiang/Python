@@ -1,0 +1,6 @@
+https://www.bilibili.com/video/BV1cJ411R7bP
+
+P01 PythonQt 简介和安装
+    PySide2 PyQt5
+    目前两者差不多，后面应多关注 PySide2
+P02 一个简单的例子
