@@ -1,4 +1,3 @@
-# ----------------------------------------------------------------------------------------------------
 # https://blog.csdn.net/hanguofei/article/details/90718604
 # Python大球吃小球
 
@@ -58,7 +57,7 @@ class Ball(object):
 
 def main():
     balls = []                                      # 定义用来装所有球的容器
-    pygame.init()                                   # 初始化导入的pygame中的模块
+    pygame.init()                                   # 使用 pygame 某些功能(比如 音频、文字)必须的操作
     screen = pygame.display.set_mode((800, 600))    # 初始化用于显示的窗口并设置窗口尺寸
     pygame.display.set_caption('大球吃小球')         # 设置当前窗口的标题
     
