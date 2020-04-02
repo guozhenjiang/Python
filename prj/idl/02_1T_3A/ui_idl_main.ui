@@ -46,6 +46,9 @@
      <height>177</height>
     </size>
    </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+   </property>
    <property name="windowTitle">
     <string>Log</string>
    </property>
@@ -85,6 +88,12 @@ color: rgb(0, 255, 127);</string>
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_Set">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+   </property>
    <property name="windowTitle">
     <string>设置</string>
    </property>
@@ -421,6 +430,9 @@ color: rgb(0, 255, 127);</string>
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_Hex">
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+   </property>
    <property name="windowTitle">
     <string>Hex</string>
    </property>
@@ -459,9 +471,12 @@ color: rgb(0, 255, 127);</string>
    </widget>
    <addaction name="menu_View"/>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_ASCII">
+  <widget class="QDockWidget" name="dockWidget_Ascii">
    <property name="enabled">
     <bool>true</bool>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
    <property name="windowTitle">
     <string>ASCII</string>
@@ -485,6 +500,9 @@ color: rgb(0, 255, 127);</string>
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>设置</string>
    </property>
@@ -493,12 +511,18 @@ color: rgb(0, 255, 127);</string>
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Log</string>
    </property>
   </action>
   <action name="action_ViewHex">
    <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">

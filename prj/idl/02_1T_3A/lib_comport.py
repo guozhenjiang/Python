@@ -6,7 +6,8 @@ class ComPort():
         super().__init__()
         
         self.PortValid = []
-        self.Using = ''             # 端口名
+        self.PortUsing = ''         # 正在使用的端口
+        self.PortUsed = ''          # 之前使用的端口
         self.Baud = 115200          # 波特率
         self.DataBit = 8            # 数据位宽度
         self.Parity = 'None'        # 校验
