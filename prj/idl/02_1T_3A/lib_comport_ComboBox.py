@@ -1,32 +1,38 @@
 
 # https://blog.csdn.net/MaggieTian77/article/details/79205192
 
-import serial
-import serial.tools.list_ports
-import logging
-from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtCore import pyqtSignal
+
+# https://doc.qt.io/qtforpython/PySide2/QtWidgets/QComboBox.html?highlight=combobox#PySide2.QtWidgets.QComboBox
+from PySide2.QtWidgets import QComboBox
+import lib_comport
 
 class ComPort_ComboBox(QComboBox):
-    popupAboutToBeShown = pyqtSignal()
-
+    
+    # 初始化
     def __init__(self, parent = None):
         super(ComPort_ComboBox, self).__init__(parent)
+        print('ComPort_ComboBox_init')
 
-    # 重写showPopup函数
+    # 重写 showPopup 函数
     def showPopup(self):
         print('ComPort_ComboBox.showPopup')
+        
         # 先清空原有的选项
         self.clear()
-        self.insertItem(0, '请选择端口')
-        index = 1
         
-        # 获取接入的所有串口信息，插入combobox的选项中
-        portlist = self.get_port_list(self)
-        if portlist is not None:
-            for i in portlist:
-                self.insertItem(index, i)
-                index += 1
+        com_port = ComPort()
+        com_port.just_scan()
+        
+        # self.insertItem(0, '请选择端口')
+        # index = 1
+        
+        # # 获取接入的所有串口信息，插入combobox的选项中
+        # portlist = self.get_port_list(self)
+        # if portlist is not None:
+        #     for i in portlist:
+        #         self.insertItem(index, i)
+        #         index += 1
+        
         QComboBox.showPopup(self)   # 弹出选项框
 
     @staticmethod
