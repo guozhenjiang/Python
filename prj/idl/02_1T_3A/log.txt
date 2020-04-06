@@ -1,0 +1,7 @@
+
+载入 ./ui_idl_main.ui
+初始化 UI
+初始化 Signal Slot
+扫描端口
+
+端口 COM4

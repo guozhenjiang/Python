@@ -15,6 +15,18 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_5">
+    <property name="leftMargin">
+     <number>1</number>
+    </property>
+    <property name="topMargin">
+     <number>1</number>
+    </property>
+    <property name="rightMargin">
+     <number>1</number>
+    </property>
+    <property name="bottomMargin">
+     <number>1</number>
+    </property>
     <item>
      <widget class="QTabWidget" name="tabWidget_Display">
       <property name="currentIndex">
@@ -91,6 +103,9 @@ color: rgb(0, 255, 127);</string>
    <property name="enabled">
     <bool>true</bool>
    </property>
+   <property name="acceptDrops">
+    <bool>false</bool>
+   </property>
    <property name="features">
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
@@ -109,10 +124,7 @@ color: rgb(0, 255, 127);</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <layout class="QGridLayout" name="gridLayout">
-          <property name="horizontalSpacing">
-           <number>10</number>
-          </property>
+         <layout class="QGridLayout" name="gridLayout_port_set_select">
           <item row="0" column="0">
            <widget class="QLabel" name="label_StrPort">
             <property name="text">
@@ -121,7 +133,10 @@ color: rgb(0, 255, 127);</string>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QComboBox" name="comboBox_PortSelect">
+           <widget class="QComboBox" name="comboBox_name">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 0, 0);</string>
+            </property>
             <property name="currentText">
              <string>选择端口</string>
             </property>
@@ -140,7 +155,7 @@ color: rgb(0, 255, 127);</string>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QComboBox" name="comboBox_BaudSelect">
+           <widget class="QComboBox" name="comboBox_baud">
             <property name="layoutDirection">
              <enum>Qt::LeftToRight</enum>
             </property>
@@ -282,7 +297,7 @@ color: rgb(0, 255, 127);</string>
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QComboBox" name="comboBox_DataBitSelect">
+           <widget class="QComboBox" name="comboBox_byte">
             <item>
              <property name="text">
               <string>8</string>
@@ -313,7 +328,7 @@ color: rgb(0, 255, 127);</string>
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QComboBox" name="comboBox_ParityBitSelect">
+           <widget class="QComboBox" name="comboBox_parity">
             <item>
              <property name="text">
               <string>None</string>
@@ -349,7 +364,7 @@ color: rgb(0, 255, 127);</string>
            </widget>
           </item>
           <item row="4" column="1">
-           <widget class="QComboBox" name="comboBox_StopBitSelect">
+           <widget class="QComboBox" name="comboBox_stop">
             <item>
              <property name="text">
               <string>1</string>
@@ -379,21 +394,21 @@ color: rgb(0, 255, 127);</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout">
            <item>
-            <widget class="QCheckBox" name="checkBox_XonXoff">
+            <widget class="QCheckBox" name="checkBox_xonxoff">
              <property name="text">
               <string>XonXoff</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="checkBox_RtsCts">
+            <widget class="QCheckBox" name="checkBox_rtscts">
              <property name="text">
               <string>RTS/CTS</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="checkBox_DsrDtr">
+            <widget class="QCheckBox" name="checkBox_dsrdtr">
              <property name="text">
               <string>DSR/DTR</string>
              </property>
@@ -402,28 +417,57 @@ color: rgb(0, 255, 127);</string>
           </layout>
          </widget>
         </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_PortScan">
-          <property name="text">
-           <string>扫描端口</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_PortOpenClose">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="text">
-        <string>打开端口</string>
-       </property>
-       <property name="flat">
-        <bool>false</bool>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="0,2,0">
+       <item>
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_open_close">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>打开端口</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
      </item>
      <item>
       <spacer name="spacer_Set">

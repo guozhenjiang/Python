@@ -1,34 +1,90 @@
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide2.QtWidgets import QApplication, QComboBox
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtCore import QFile
-
-# import sys
-# sys.path.append('D:\\study\\python\\prj\idl\\02_一个标签三个基站')
+from PySide2.QtCore import QFile, QTextStream
 from lib_comport import *
 from lib_comport_ComboBox import *
-
 from PySide2.QtCore import Signal, Slot
+import time
+import datetime
+
+'''
+    QComboBox
+        https://doc.qt.io/qtforpython/PySide2/QtWidgets/QComboBox.html
+    QFile
+        https://doc.qt.io/qt-5/qfile.html
+    QTextStream
+        https://doc.qt.io/qtforpython/PySide2/QtCore/QTextStream.html
+    QGridLayout
+        https://doc.qt.io/qtforpython/PySide2/QtWidgets/QGridLayout.html
+'''
 
 class IndoorLocation(QObject):
     # 实例化
     def __init__(self):
-        # 从文件中加载 UI
-        str_ui_main = './ui_idl_main.ui'
-        qfile_ui = QFile(str_ui_main)
-        qfile_ui.open(QFile.ReadOnly)
-        qfile_ui.close()
         
-        self.Port = ComPort()
-        self.ui_main = QUiLoader().load(str_ui_main)
+        log_file_loc = './log.txt'
+        print('以读写打开 %s' %(log_file_loc))
+        log_file = QFile(log_file_loc)
+        log_file.open(QFile.ReadWrite | QFile.Truncate)
         
+        self.log_stamp_last = time.perf_counter()
+        self.log_stream = QTextStream(log_file)
+        self.log_stream.setCodec('UTF-8')
+        self.log_stream.seek(log_file.size())
+        
+        # print(self.log_stream.readAll())
+        
+        # print('%s 每行内容' %(log_file_loc))
+        # while(not log_file.atEnd()):
+        #     line = log_file.readLine()
+        #     print(line)
+        
+        # print('使用 QTextStream 写 log')
+        # self.log_stream.seek(log_file.size())
+        # time.sleep(0.5)
+        # self.log_stream << self.log_stream.pos() << '|' << datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') << '\r\n'
+        
+        file_loc_ui_main = './ui_idl_main.ui'
+        self.ui_main = QUiLoader().load(file_loc_ui_main)
+        self.log('载入 %s' %(file_loc_ui_main))
+        self.port = Port()                              # 实例化
+        
+        # 初始化
+        self.init_ui()
+        self.init_signal_slot()
+        # self.slot_port_scan()
+        self.slot_PortComboBox_showPopup()
+    
+    # Log 功能
+    def log(self, log):
+        # print(time.perf_counter(), ' --- ', time.process_time())
+        self.log_stamp = time.perf_counter()    # time.clock()  time.process_time()
+        log_stamp_det = self.log_stamp - self.log_stamp_last
+        self.log_stamp_last = self.log_stamp
+        
+        if(log_stamp_det > 0.1):
+            new_line = '\r\n'
+        else:
+            new_line = ''
+        
+        # print(log_stamp_det)
+        
+        # stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        # stamp = time.strftime("%H:%M:%S ", time.localtime())
+        stamp = ''
+        new_log_str = new_line + stamp + log
+        
+        self.log_stream << new_log_str << '\r\n'
+        self.ui_main.plainTextEdit_Log.appendPlainText(new_log_str)
+        # self.ui_main.plainTextEdit.setSelection()
+        print(new_log_str)
+        
+        
+        pass
+    
+    def init_ui(self):
+        self.log('初始化 UI')
         ui = self.ui_main
-        
-        ui.plainTextEdit_Log.clear()
-        
-        # self.ui_main.comboBox_PortSelect = ComPort_ComboBox()   # 替换界面中的端口选择下拉框 未实现
-        
-        # Dock 窗口显示隐藏设置
-        self.log('隐藏 ASCII 窗口')
         ui.action_ViewSet.checked = True
         ui.action_ViewLog.checked = True
         ui.action_ViewHex.checked = True
@@ -39,105 +95,118 @@ class IndoorLocation(QObject):
         ui.dockWidget_Hex.show()
         ui.dockWidget_Ascii.hide()
         
-        # 菜单控制 Dock 窗口是否显示
-        self.log('信号与槽 Dock 显示隐藏')
-        ui.action_ViewSet.changed.connect(lambda:self.dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
-        ui.action_ViewLog.changed.connect(lambda:self.dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
-        ui.action_ViewHex.changed.connect(lambda:self.dock_show_hide(ui.dockWidget_Hex, ui.action_ViewHex.isChecked()))
-        ui.action_ViewAscii.changed.connect(lambda:self.dock_show_hide(ui.dockWidget_Ascii, ui.action_ViewAscii.isChecked()))
+        ui.action_ViewSet.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
+        ui.action_ViewLog.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
+        ui.action_ViewHex.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Hex, ui.action_ViewHex.isChecked()))
+        ui.action_ViewAscii.changed.connect(lambda:self.slot_dock_show_hide(ui.dockWidget_Ascii, ui.action_ViewAscii.isChecked()))
         
-        # 信号与槽 设置
-        self.log('信号与槽 设置 扫描端口')
-        ui.pushButton_PortScan.clicked.connect(lambda:self.Port.scan(self.ui_main.comboBox_PortSelect))
-        
-        self.log('信号与槽 设置 选择端口')
-        ui.comboBox_PortSelect.currentTextChanged.connect(lambda:self.Port.set_com(ui.comboBox_PortSelect.currentText()))
-        
-        self.log('信号与槽 设置 波特率')
-        ui.comboBox_BaudSelect.currentTextChanged.connect(lambda:self.Port.set_baud(ui.comboBox_BaudSelect.currentText()))
-        
-        self.log('信号与槽 设置 数据位')
-        ui.comboBox_DataBitSelect.currentTextChanged.connect(lambda:self.Port.set_data_bit(ui.comboBox_DataBitSelect.currentText()))
-        
-        self.log('信号与槽 设置 校验')
-        ui.comboBox_ParityBitSelect.currentTextChanged.connect(lambda:self.Port.set_parity(ui.comboBox_ParityBitSelect.currentText()))
-        
-        self.log('信号与槽 设置 停止位')
-        ui.comboBox_StopBitSelect.currentTextChanged.connect(lambda:self.Port.set_stop_bit(ui.comboBox_StopBitSelect.currentText()))
-        
-        self.log('信号与槽 设置 流控 XonXoff')
-        ui.checkBox_XonXoff.stateChanged.connect(lambda:self.Port.set_XonXoff(ui.checkBox_XonXoff.isChecked()))
-        
-        self.log('信号与槽 设置 流控 RtsCts')
-        ui.checkBox_RtsCts.stateChanged.connect(lambda:self.Port.set_RtsCts(ui.checkBox_RtsCts.isChecked()))
-        
-        self.log('信号与槽 设置 流控 XoDsrDtrnXoff')
-        ui.checkBox_DsrDtr.stateChanged.connect(lambda:self.Port.set_DsrDtr(ui.checkBox_DsrDtr.isChecked()))
-        
-        self.log('信号与槽 设置 打开端口')
-        ui.pushButton_PortOpenClose.clicked.connect(lambda:self.Port.open_close())
-        
-        # self.log('信号与槽 设置 打开端口 根据状态改变按键')
-        '''
-            注意:
-                如果下面的 connect 中的 slot 函数带括号 后面就不会触发了！
-        '''
-        self.Port.signal_PortOpenClose.connect(self.slot_button_update)
-        
-        # 初始化
-        self.log('初始化 UI')
-        self.init_ui(self.ui_main)   # 初始化 UI
-        self.Port.scan(self.ui_main.comboBox_PortSelect)
-        
-        # print('测试修改按键文字 开始')
-        # # self.ui_main.good.setText = 'a'     # AttributeError: 'PySide2.QtWidgets.QMainWindow' object has no attribute 'good'
-        # self.ui_main.pushButton_PortOpenClose.abcdefg = 'a'
-        # print('测试修改按键文字 结束')
-
-    # def set_button_text(self, new_text):
-    #     self.ui_main.pushButo
+        ui.comboBox_name.deleteLater()          # 删掉 UI 生成的端口选择下拉框控件
+        ui.PortComboBox_name = PortComboBox()   # 用自己重写的下拉框控件替换被删的
+        ui.gridLayout_port_set_select.addWidget(ui.PortComboBox_name, 0, 1) # 添加到原来的布局框中相同位置
+        # ui.PortComboBox_name.show()             # 显示控件
     
-    # @Slot()
-    @Slot(bool)
-    def slot_button_update(self, is_open):
-        print('进入 slot')
-        if(is_open):
-            self.ui_main.pushButton_PortOpenClose.setText('关闭端口')
-            
+    def init_signal_slot(self):
+        self.log('初始化 Signal Slot')
+        ui = self.ui_main
+        
+        ui.PortComboBox_name.signal_PortComboBox_showPopup.connect(self.slot_PortComboBox_showPopup)
+        ui.PortComboBox_name.currentTextChanged.connect(    lambda:self.slot_port_name())
+        ui.comboBox_baud.currentTextChanged.connect(    lambda:self.slot_port_baud())
+        ui.comboBox_byte.currentTextChanged.connect(    lambda:self.slot_port_byte())
+        ui.comboBox_parity.currentTextChanged.connect(  lambda:self.slot_port_parity())
+        ui.comboBox_stop.currentTextChanged.connect(    lambda:self.slot_port_stop())
+        ui.checkBox_xonxoff.stateChanged.connect(       lambda:self.slot_port_xonxoff())
+        ui.checkBox_rtscts.stateChanged.connect(        lambda:self.slot_port_rtscts())
+        ui.checkBox_dsrdtr.stateChanged.connect(        lambda:self.slot_port_dsrdtr())
+        ui.pushButton_open_close.clicked.connect(       lambda:self.slot_port_open_close())
+    
+    def slot_PortComboBox_showPopup(self):
+        print('slot_PortComboBox_showPopup')
+        self.log('扫描端口')
+        port = self.port
+        cmb = self.ui_main.PortComboBox_name
+        
+        port.name_last = cmb.currentText()
+        cmb.clear()     # 会触发 Signal: ui.PortComboBox_name.currentTextChanged
+        port.scan()
+        
+        if(len(port.valid) > 0):
+            cmb.addItems(port.valid)
         else:
-            self.ui_main.pushButton_PortOpenClose.setText('打开端口')
+            cmb.addItem('无可用端口')
         
-        self.ui_main.groupBox_PortSet.setEnabled(not is_open)
-    
-    # Log 功能
-    def log(self, log_str):
-        print(log_str)
-        self.ui_main.plainTextEdit_Log.appendPlainText(log_str)
+        idx = cmb.findText(port.name_last)
         
-        # # 将光标移动到末尾 未实现
-        # cusor = self.ui_main.plainTextEdit_Log.textCusor()
-        # cusor.movePosition(QtGui.QTextCursor.End)
-        # self.ui_main.plainTextEdit_Log.setTextCusor(cusor)
-        pass
+        if(idx >= 0):
+            cmb.setCurrentIndex(idx)
+        else:
+            cmb.setCurrentIndex(0)
     
-    # 初始化 UI
-    def init_ui(self, ui):
-        self.log('更新端口选择下来菜单内容')
-        # self.update_PortSelect_Item(ui.comboBox_PortSelect)
+    def slot_port_name(self):
+        self.port.name = self.ui_main.PortComboBox_name.currentText()
+        self.log('端口 %s' %(self.port.name))
+    
+    def slot_port_baud(self):
+        self.port.baud = int(self.ui_main.comboBox_baud.currentText(), 10)
+        self.log('波特率 %s' %(self.port.baud))
+    
+    def slot_port_byte(self):
+        self.port.byte = int(self.ui_main.comboBox_byte.currentText(), 10)
+        self.log('字节宽度 %s' %(self.port.byte))
+    
+    def slot_port_parity(self):
+        self.port.set_parity(self.ui_main.comboBox_parity.currentText())
+        self.log('校验 %s' %(self.port.parity))
+    
+    def slot_port_stop(self):
+        self.port.set_stop(self.ui_main.comboBox_stop.currentText())
+        self.log('停止位 %s' %(self.port.stop))
+    
+    def slot_port_xonxoff(self):
+        self.port.xonxoff = self.ui_main.checkBox_xonxoff.isChecked()
+        self.log('软件流控 %s' %(self.port.xonxoff))
+    
+    def slot_port_rtscts(self):
+        self.port.rtscts = self.ui_main.checkBox_rtscts.isChecked()
+        self.log('RTS/CTS %s' %(self.port.rtscts))
+    
+    def slot_port_dsrdtr(self):
+        self.port.dsrdtr = self.ui_main.checkBox_dsrdtr.isChecked()
+        self.log('DSR/DTR %s' %(self.port.dsrdtr))
+    
+    def force_update_port_parameter(self):
+        self.log('从 UI 获取端口设置')
+        self.slot_port_name()
+        self.slot_port_baud()
+        self.slot_port_byte()
+        self.slot_port_parity()
+        self.slot_port_stop()
+        self.slot_port_xonxoff()
+        self.slot_port_rtscts()
+        self.slot_port_dsrdtr()
+    
+    def slot_port_open_close(self):
+        self.log('%s' %(self.ui_main.pushButton_open_close.text()))
+        
+        if(not self.port.isopen):
+            self.force_update_port_parameter()
+            port = self.port
+            self.log('尝试打开 %s %s %s %s %s %s %s %s ' %(port.name, port.baud, port.byte, port.parity, port.stop, port.xonxoff, port.rtscts, port.dsrdtr))
+        
+        self.port.open_close()
+        
+        self.ui_main.groupBox_PortSet.setEnabled(not self.port.isopen)
+        
+        if(self.port.isopen):
+            self.ui_main.pushButton_open_close.setText('关闭端口')
+            self.log('端口打开')
+        else:
+            self.ui_main.pushButton_open_close.setText('打开端口')
+            self.log('端口关闭')
     
     # 槽函数
-    def dock_show_hide(self, dock_set, is_checked):
-        # 方法 1
+    def slot_dock_show_hide(self, dock_set, is_checked):
         dock_set.setVisible(is_checked)
-        
-        # 方法 2
-        # if(is_checked):
-        #     dock_set.show()
-        # else:
-        #     dock_set.hide()
-    
-    def action_check_status_set(self, item, new_status):
-        item.checked = new_status
         
 app = QApplication([])
 idl = IndoorLocation()

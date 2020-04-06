@@ -1,0 +1,3 @@
+https://www.programcreek.com/python/example/99599/PyQt5.QtCore.QTextStream
+
+这些例子只是一些开源项目中使用 QTextStream 的局部代码，没法直接运行的
