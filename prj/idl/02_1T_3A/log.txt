@@ -4,4 +4,4 @@
 初始化 Signal Slot
 扫描端口
 
-端口 COM4
+端口 COM1

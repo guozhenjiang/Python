@@ -1,11 +1,13 @@
 from PySide2.QtWidgets import QApplication, QComboBox
+from PySide2.QtGui import QTextCursor
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtCore import QFile, QTextStream
+from PySide2.QtCore import QFile, QTextStream, QTimer
 from lib_comport import *
 from lib_comport_ComboBox import *
 from PySide2.QtCore import Signal, Slot
 import time
 import datetime
+import _thread, threading
 
 '''
     QComboBox
@@ -21,6 +23,7 @@ import datetime
 class IndoorLocation(QObject):
     # 实例化
     def __init__(self):
+        self.name = 'IDL'
         
         log_file_loc = './log.txt'
         print('以读写打开 %s' %(log_file_loc))
@@ -76,6 +79,7 @@ class IndoorLocation(QObject):
         
         self.log_stream << new_log_str << '\r\n'
         self.ui_main.plainTextEdit_Log.appendPlainText(new_log_str)
+        # self.ui_main.plainTextEdit_Log.moveCursor(QTextCursor.End)
         # self.ui_main.plainTextEdit.setSelection()
         print(new_log_str)
         
@@ -119,6 +123,7 @@ class IndoorLocation(QObject):
         ui.checkBox_rtscts.stateChanged.connect(        lambda:self.slot_port_rtscts())
         ui.checkBox_dsrdtr.stateChanged.connect(        lambda:self.slot_port_dsrdtr())
         ui.pushButton_open_close.clicked.connect(       lambda:self.slot_port_open_close())
+        ui.pushButton_CleanReceive.clicked.connect(     lambda:self.slot_clean_receive())
     
     def slot_PortComboBox_showPopup(self):
         print('slot_PortComboBox_showPopup')
@@ -200,15 +205,64 @@ class IndoorLocation(QObject):
         if(self.port.isopen):
             self.ui_main.pushButton_open_close.setText('关闭端口')
             self.log('端口打开')
+            # self.idl_rx_process_start()
         else:
             self.ui_main.pushButton_open_close.setText('打开端口')
             self.log('端口关闭')
+            # self.idl_rx_process_stop()
+    
+    def slot_clean_receive(self):
+        self.ui_main.plainTextEdit_Hex.clear()
+        self.ui_main.plainTextEdit_Ascii.clear()
     
     # 槽函数
     def slot_dock_show_hide(self, dock_set, is_checked):
         dock_set.setVisible(is_checked)
+    
+    def receive_port_data(self):
+        port = self.port
+        data_text = self.ui_main.plainTextEdit_Hex
         
+        if(self.port.isopen):
+            if(port.port.in_waiting > 0):           # inWaiting()
+                new_bytes = port.port.read()
+                new_str = new_bytes.hex()
+                
+                print()
+                print(type(new_bytes), new_bytes)
+                print(type(new_str), new_str)
+                
+                # data_text.appendPlainText(new_str)                # 追加方式会导致每项换行
+                
+                data_text.moveCursor(QTextCursor.End)               # 手动在末尾插入
+                data_text.insertPlainText(new_str + ' ')
+    
+    def idl_rx_process_start(self):
+        self.t_rx = threading.Thread(target=IndoorLocation.receive_port_data, args=(self,))
+        self.t_rx.start()
+        self.t_rx.join()
+    
+    def idl_rx_process_stop(self):
+        self.t_rx.stop()
+
+# class Thread_UartRx(threading.Thread):
+#     def __init__(self, name):
+#         threading.Thread.__init__(self)
+#         self.name = name
+    
+#     def run(self):
+#         print()
+        
+
 app = QApplication([])
+
 idl = IndoorLocation()
 idl.ui_main.show()
+
+timer = QTimer()
+timer.timeout.connect(idl.receive_port_data)
+timer.start(0)
+
+# idl.idl_rx_process_start()
+
 app.exec_()
