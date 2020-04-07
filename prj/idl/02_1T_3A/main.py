@@ -1,4 +1,5 @@
-from PySide2.QtWidgets import QApplication, QComboBox
+from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QComboBox
 from PySide2.QtGui import QTextCursor
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile, QTextStream, QTimer
@@ -8,6 +9,8 @@ from PySide2.QtCore import Signal, Slot
 import time
 import datetime
 import _thread, threading
+import sys
+import pyglet
 
 '''
     QComboBox
@@ -82,8 +85,6 @@ class IndoorLocation(QObject):
         # self.ui_main.plainTextEdit_Log.moveCursor(QTextCursor.End)
         # self.ui_main.plainTextEdit.setSelection()
         print(new_log_str)
-        
-        
         pass
     
     def init_ui(self):
@@ -108,6 +109,14 @@ class IndoorLocation(QObject):
         ui.PortComboBox_name = PortComboBox()   # 用自己重写的下拉框控件替换被删的
         ui.gridLayout_port_set_select.addWidget(ui.PortComboBox_name, 0, 1) # 添加到原来的布局框中相同位置
         # ui.PortComboBox_name.show()             # 显示控件
+        
+        # print('\r\n视图窗口类型: ', type(ui.openGLWidget_Position), '\r\n')     # <class 'PySide2.QtWidgets.QOpenGLWidget'>
+        
+        # 删除 Qt Designer 生成的 ui.openGLWidget_Position
+        # ui.openGLWidget_Position.deleteLater()
+        # self.win_view = OpenGLWidget()#pyglet.window.Window()
+        # print('\r\nself.win_view Type', type(self.win_view), '\r\n')
+        # # ui.horizontalLayout_WinView.addWidget(lambda:self.win_view, 0)
     
     def init_signal_slot(self):
         self.log('初始化 Signal Slot')
@@ -215,7 +224,6 @@ class IndoorLocation(QObject):
         self.ui_main.plainTextEdit_Hex.clear()
         self.ui_main.plainTextEdit_Ascii.clear()
     
-    # 槽函数
     def slot_dock_show_hide(self, dock_set, is_checked):
         dock_set.setVisible(is_checked)
     
@@ -224,18 +232,21 @@ class IndoorLocation(QObject):
         data_text = self.ui_main.plainTextEdit_Hex
         
         if(self.port.isopen):
-            if(port.port.in_waiting > 0):           # inWaiting()
-                new_bytes = port.port.read()
-                new_str = new_bytes.hex()
-                
-                print()
-                print(type(new_bytes), new_bytes)
-                print(type(new_str), new_str)
-                
-                # data_text.appendPlainText(new_str)                # 追加方式会导致每项换行
-                
-                data_text.moveCursor(QTextCursor.End)               # 手动在末尾插入
-                data_text.insertPlainText(new_str + ' ')
+            try:
+                if(port.port.in_waiting > 0):           # inWaiting()
+                    new_bytes = port.port.read()
+                    new_str = new_bytes.hex()
+                    
+                    print()
+                    print(type(new_bytes), new_bytes)
+                    print(type(new_str), new_str)
+                    
+                    # data_text.appendPlainText(new_str)                # 追加方式会导致每项换行
+                    
+                    data_text.moveCursor(QTextCursor.End)               # 手动在末尾插入
+                    data_text.insertPlainText(new_str + ' ')
+            except:
+                pass
     
     def idl_rx_process_start(self):
         self.t_rx = threading.Thread(target=IndoorLocation.receive_port_data, args=(self,))

@@ -75,7 +75,7 @@ font: 10pt &quot;微软雅黑&quot;;
 color: rgb(0, 255, 127);</string>
        </property>
        <property name="verticalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOn</enum>
+        <enum>Qt::ScrollBarAsNeeded</enum>
        </property>
        <property name="horizontalScrollBarPolicy">
         <enum>Qt::ScrollBarAsNeeded</enum>
@@ -508,9 +508,6 @@ color: rgb(0, 255, 127);</string>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
       <widget class="QPlainTextEdit" name="plainTextEdit_Hex">
-       <property name="verticalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOn</enum>
-       </property>
        <property name="placeholderText">
         <string>Hex</string>
        </property>
@@ -556,9 +553,6 @@ color: rgb(0, 255, 127);</string>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QPlainTextEdit" name="plainTextEdit_Ascii">
-       <property name="verticalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOn</enum>
-       </property>
        <property name="placeholderText">
         <string>ASCII</string>
        </property>

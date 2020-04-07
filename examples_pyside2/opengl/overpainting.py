@@ -103,17 +103,17 @@ class Bubble:
         bottomOverflow = self.position.y() + self.radius - bbox.bottom()
 
         if leftOverflow < 0.0:
-            self.position.setX(self.position.x() - 2 * leftOverflow)
+            # self.position.setX(self.position.x() - 2 * leftOverflow)
             self.vel.setX(-self.vel.x())
         elif rightOverflow > 0.0:
-            self.position.setX(self.position.x() - 2 * rightOverflow)
+            # self.position.setX(self.position.x() - 2 * rightOverflow)
             self.vel.setX(-self.vel.x())
 
         if topOverflow < 0.0:
-            self.position.setY(self.position.y() - 2 * topOverflow)
+            # self.position.setY(self.position.y() - 2 * topOverflow)
             self.vel.setY(-self.vel.y())
         elif bottomOverflow > 0.0:
-            self.position.setY(self.position.y() - 2 * bottomOverflow)
+            # self.position.setY(self.position.y() - 2 * bottomOverflow)
             self.vel.setY(-self.vel.y())
 
     def rect(self):
@@ -190,7 +190,7 @@ class GLWidget(QGLWidget):
 
         self.lastPos = QPoint(event.pos())
 
-    def paintEvent(self, event):
+    def paintEvent(self, event):    # 当窗口视图发生变化 会自动调用
         painter = QPainter()
         painter.begin(self)
         painter.setRenderHint(QPainter.Antialiasing)
