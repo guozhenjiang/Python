@@ -2,6 +2,7 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtWidgets import QComboBox
 from PySide2.QtGui import QTextCursor
 from PySide2.QtUiTools import QUiLoader
+from PySide2 import QtCore
 from PySide2.QtCore import QFile, QTextStream, QTimer
 from lib_comport import *
 from lib_comport_ComboBox import *
@@ -10,7 +11,14 @@ import time
 import datetime
 import _thread, threading
 import sys
-import pyglet
+# import pyglet
+
+# Matplotlib 图像嵌入
+import matplotlib
+from matplotlib.pyplot import *
+from matplotlib.backends.backend_qt5agg import (FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
+import numpy as np
+import matplotlib.pyplot as plt
 
 '''
     QComboBox
@@ -27,6 +35,39 @@ class IndoorLocation(QObject):
     # 实例化
     def __init__(self):
         self.name = 'IDL'
+        
+        Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0, 'r':0.0}
+        Tag_t = {'name':'Tag', 'r0':0.0, 'r1':0.0, 'r2':0.0,'x':0.0, 'y':0.0, 'z':0.0}
+        
+        self.Anchor0 = Anchor_t.copy()
+        self.Anchor1 = Anchor_t.copy()
+        self.Anchor2 = Anchor_t.copy()
+        
+        self.Tag = Tag_t.copy()
+        
+        self.Anchor0['name'] = 'Anchor0'
+        self.Anchor0['color'] = 'r'
+        self.Anchor0['x'] = 0.0
+        self.Anchor0['y'] = 0.0
+        self.Anchor0['z'] = 0.0
+        self.Anchor0['r'] = 5.0
+        
+        self.Anchor1['name'] = 'Anchor1'
+        self.Anchor1['color'] = 'g'
+        self.Anchor1['x'] = 10.0
+        self.Anchor1['y'] = 0.0
+        self.Anchor1['z'] = 0.0
+        self.Anchor1['r'] = 5.0
+        
+        self.Anchor2['name'] = 'Anchor2'
+        self.Anchor2['color'] = 'b'
+        self.Anchor2['x'] = 10.0
+        self.Anchor2['y'] = 10.0
+        self.Anchor2['z'] = 0.0
+        self.Anchor2['r'] = 5.0
+        
+        self.index_in_pkg = 0
+        self.uart_pkg = np.zeros(16, dtype=int, order='C')         # 新包缓存
         
         log_file_loc = './log.txt'
         print('以读写打开 %s' %(log_file_loc))
@@ -108,15 +149,73 @@ class IndoorLocation(QObject):
         ui.comboBox_name.deleteLater()          # 删掉 UI 生成的端口选择下拉框控件
         ui.PortComboBox_name = PortComboBox()   # 用自己重写的下拉框控件替换被删的
         ui.gridLayout_port_set_select.addWidget(ui.PortComboBox_name, 0, 1) # 添加到原来的布局框中相同位置
-        # ui.PortComboBox_name.show()             # 显示控件
         
-        # print('\r\n视图窗口类型: ', type(ui.openGLWidget_Position), '\r\n')     # <class 'PySide2.QtWidgets.QOpenGLWidget'>
+        # 将 Matlabplotlib 2D 图像嵌入界面
+        layout = self.ui_main.horizontalLayout_2D_Static                # <class 'PySide2.QtWidgets.QHBoxLayout'>
         
-        # 删除 Qt Designer 生成的 ui.openGLWidget_Position
-        # ui.openGLWidget_Position.deleteLater()
-        # self.win_view = OpenGLWidget()#pyglet.window.Window()
-        # print('\r\nself.win_view Type', type(self.win_view), '\r\n')
-        # # ui.horizontalLayout_WinView.addWidget(lambda:self.win_view, 0)
+        self.canvas_2d_static = FigureCanvas(Figure())                  # <class 'matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg'>
+        layout.addWidget(self.canvas_2d_static)
+        
+        self.circle = plt.Circle((-30, 30), 20, color='b', alpha=0.5)
+        
+        self.axes_2d_static = self.canvas_2d_static.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
+        self.axes_2d_static.add_artist(self.circle)
+        
+        self.axes_2d_static.grid(True)
+        self.axes_2d_static.set_xlim(-150, 150)
+        self.axes_2d_static.set_ylim(-150, 150)
+        
+        self._timer = self.canvas_2d_static.new_timer(50, [(self.update_2D_Dynamic, (), {})])
+        self._timer.start()
+        
+        # t = np.linspace(0, 10, 501)
+        # self.axes_2d_static.plot(t, np.tan(t), t, 20*t-100, "-", label='tanx_and_line', lw=1, markersize=10)
+        # self.axes_2d_static.plot(t, -3*t, "-", label='-3t', lw=1)
+        # self.axes_2d_static.plot(3, -125, "b.", label='point(3, -125)')
+        # self.axes_2d_static.scatter(x=2, y=0, color='tab:blue', s=7000, label='ball', alpha=0.3, edgecolors='r', lw=1)
+        # self.axes_2d_static.plot(3, 25, color='tab:blue', label='ball', alpha=1.0, lw=1)
+        # matplotlib.pyplot.scatter(x, y, s=None, c=None, marker=None, cmap=None, norm=None, vmin=None, vmax=None, alpha=None, linewidths=None, verts=<deprecated parameter>, edgecolors=None, *, plotnonfinite=False, data=None, **kwargs)
+        # self.axes_2d_static.scatter(x=3, y=25, c='tab:blue', label='ball', alpha=0.5, lw=1, edgecolors='r')
+        
+        # self.axes_2d_static.scatter(x=0, y=0, c='tab:blue', label='ball', s=100, alpha=0.5, lw=1, edgecolors='r')
+        
+        # self.axes_2d_static.clear()
+        # self.axes_2d_static.grid(True)
+        # self.axes_2d_static.set_xlim(-150, 150)
+        # self.axes_2d_static.set_ylim(-150, 150)
+        
+        self.axes_2d_static.plot([0],[0], c='g', marker="o",  markersize=10, alpha=0.2)
+        self.axes_2d_static.plot([50],[50], c='g', marker="o",  markersize=60, alpha=0.2)
+        
+        self.update_2D_Dynamic()
+        
+    def update_2D_Dynamic(self):
+        # print('update_2d_dynamic')
+        self.axes_2d_static.clear()
+        self.axes_2d_static.grid(True)
+        self.axes_2d_static.set_xlim(-20, 20)
+        self.axes_2d_static.set_ylim(-20, 20)
+        
+        self.update_Anchor(self.Anchor0)
+        self.update_Anchor(self.Anchor1)
+        self.update_Anchor(self.Anchor2)
+        
+        self.axes_2d_static.figure.canvas.draw()
+        pass
+        
+    def update_Anchor(self, anchor):
+        self.circle = plt.Circle((anchor['x'], anchor['y']), anchor['r'], color=anchor['color'], alpha=0.5, picker=5)
+        self.axes_2d_static.add_artist(self.circle)
+        pass
+    
+    def draw_Circle(self, x, y, r):
+        pass
+    
+    def draw_Anchor(self, x, y, r, name=None):
+        pass
+    
+    def draw_Tag_to_3_Anchor_(self, d1, d2, d3):
+        pass
     
     def init_signal_slot(self):
         self.log('初始化 Signal Slot')
@@ -135,7 +234,6 @@ class IndoorLocation(QObject):
         ui.pushButton_CleanReceive.clicked.connect(     lambda:self.slot_clean_receive())
     
     def slot_PortComboBox_showPopup(self):
-        print('slot_PortComboBox_showPopup')
         self.log('扫描端口')
         port = self.port
         cmb = self.ui_main.PortComboBox_name
@@ -223,6 +321,9 @@ class IndoorLocation(QObject):
     def slot_clean_receive(self):
         self.ui_main.plainTextEdit_Hex.clear()
         self.ui_main.plainTextEdit_Ascii.clear()
+        self.axes_2d_static.clear()
+        self.axes_2d_static.figure.canvas.draw()
+        self.log('清空接收')
     
     def slot_dock_show_hide(self, dock_set, is_checked):
         dock_set.setVisible(is_checked)
@@ -236,15 +337,54 @@ class IndoorLocation(QObject):
                 if(port.port.in_waiting > 0):           # inWaiting()
                     new_bytes = port.port.read()
                     new_str = new_bytes.hex()
+                    new_bytes_0 = new_bytes[0]
+                    # print(type(new_bytes_0), new_bytes_0)
+                    # new_int = int.from_bytes(new_bytes_0, byteorder='big', signed=False)
                     
-                    print()
-                    print(type(new_bytes), new_bytes)
-                    print(type(new_str), new_str)
+                    # print(type(new_int), new_int)
+                    self.uart_pkg[self.index_in_pkg] = new_bytes_0
+                    # # print('self.uart_pkg[self.index_in_pkg] = ', self.uart_pkg[self.index_in_pkg])
+                    # print('hello')
+                    
+                    if(     ( 0 == self.index_in_pkg) and (0x6D != self.uart_pkg[self.index_in_pkg])
+                        or  ( 1 == self.index_in_pkg) and (0x72 != self.uart_pkg[self.index_in_pkg])
+                        or  ( 2 == self.index_in_pkg) and (0x02 != self.uart_pkg[self.index_in_pkg])
+                        or  ( 3 == self.index_in_pkg) and (0x00 != self.uart_pkg[self.index_in_pkg])
+                        or  (14 == self.index_in_pkg) and (0x0A != self.uart_pkg[self.index_in_pkg])
+                        or  (15 == self.index_in_pkg) and (0x0D != self.uart_pkg[self.index_in_pkg]) ):
+                        self.index_in_pkg = 0
+                    else:
+                        self.index_in_pkg += 1
+                        if(self.index_in_pkg >= 16):
+                            DL = self.uart_pkg[6]
+                            DH = self.uart_pkg[7]
+                            distance = (DH << 8) | DL
+                            self.Anchor0['r'] = distance
+                            
+                            DL = self.uart_pkg[8]
+                            DH = self.uart_pkg[9]
+                            distance = (DH << 8) | DL
+                            self.Anchor1['r'] = distance
+                            
+                            DL = self.uart_pkg[10]
+                            DH = self.uart_pkg[11]
+                            distance = (DH << 8) | DL
+                            self.Anchor2['r'] = distance
+                            
+                            self.log('%s' %('r0: %03d, r1: %03d, r2: %03d' %(self.Anchor0['r'], self.Anchor1['r'], self.Anchor2['r'])))
+                            
+                            self.index_in_pkg = 0
+                            pass
+                        pass
+                    
+                    # print()
+                    # print(type(new_bytes), new_bytes)
+                    # print(type(new_str), new_str)
                     
                     # data_text.appendPlainText(new_str)                # 追加方式会导致每项换行
                     
                     data_text.moveCursor(QTextCursor.End)               # 手动在末尾插入
-                    data_text.insertPlainText(new_str + ' ')
+                    data_text.insertPlainText(new_str.upper() + ' ')
             except:
                 pass
     
@@ -269,6 +409,7 @@ app = QApplication([])
 
 idl = IndoorLocation()
 idl.ui_main.show()
+# idl.ui_main.MainWindow.addToolBar(NavigationToolbar(idl.canvas_2d_static.toolBar, app))
 
 timer = QTimer()
 timer.timeout.connect(idl.receive_port_data)
