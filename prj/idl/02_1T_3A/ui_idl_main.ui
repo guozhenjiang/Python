@@ -39,8 +39,13 @@
       <item>
        <widget class="QComboBox" name="comboBox_Mode">
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
+        <item>
+         <property name="text">
+          <string>debug_rx</string>
+         </property>
+        </item>
         <item>
          <property name="text">
           <string>DongHan</string>
@@ -301,10 +306,10 @@ color: rgb(0, 255, 127);</string>
                 <enum>Qt::LeftToRight</enum>
                </property>
                <property name="currentText">
-                <string>1000000</string>
+                <string>115200</string>
                </property>
                <property name="currentIndex">
-                <number>22</number>
+                <number>12</number>
                </property>
                <item>
                 <property name="text">

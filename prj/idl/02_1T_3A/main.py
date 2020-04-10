@@ -65,7 +65,8 @@ class IndoorLocation(QObject):
         self.Anchor2['z'] = 0.0
         self.Anchor2['r'] = 80
         
-        self.index_in_pkg = 0
+        self.pkg_id = 0
+        self.pkg_byte_id = 0
         self.uart_pkg = np.zeros(100, dtype=int, order='C')         # 新包缓存
         
         log_file_loc = './log.txt'
@@ -382,7 +383,6 @@ class IndoorLocation(QObject):
         else:
             self.ui_main.pushButton_open_close.setText('打开端口')
             self.log('端口关闭')
-            # self.idl_rx_process_stop()
     
     def slot_clean_receive(self):
         self.ui_main.plainTextEdit_Hex.clear()
@@ -390,7 +390,7 @@ class IndoorLocation(QObject):
         self.clear_display_2d_matplotlib()
         self.axes_2d_static.figure.canvas.draw()
         
-        self.index_in_pkg = 0
+        self.pkg_byte_id = 0
         
         self.log('清空接收')
     
@@ -475,7 +475,10 @@ class IndoorLocation(QObject):
         dock_set.setVisible(is_checked)
     
     def receive_port_data(self):
-        if(self.port.isopen):
+        if('debug_rx' == self.ui_main.comboBox_Mode.currentText()):
+            self.receive_port_data_debug()
+            pass
+        elif(self.port.isopen):
             if('DongHan' == self.ui_main.comboBox_Mode.currentText()):
                 self.receive_port_data_DongHan()
                 pass
@@ -496,18 +499,18 @@ class IndoorLocation(QObject):
                     new_bytes_0 = new_bytes[0]
                     # print(type(new_bytes_0), new_bytes_0)
                     
-                    self.uart_pkg[self.index_in_pkg] = new_bytes_0
+                    self.uart_pkg[self.pkg_byte_id] = new_bytes_0
                     
-                    if(     ( 0 == self.index_in_pkg) and (0x6D != self.uart_pkg[self.index_in_pkg])
-                        or  ( 1 == self.index_in_pkg) and (0x72 != self.uart_pkg[self.index_in_pkg])
-                        or  ( 2 == self.index_in_pkg) and (0x02 != self.uart_pkg[self.index_in_pkg])
-                        or  ( 3 == self.index_in_pkg) and (0x00 != self.uart_pkg[self.index_in_pkg])
-                        or  (14 == self.index_in_pkg) and (0x0A != self.uart_pkg[self.index_in_pkg])
-                        or  (15 == self.index_in_pkg) and (0x0D != self.uart_pkg[self.index_in_pkg]) ):
-                        self.index_in_pkg = 0
+                    if(     ( 0 == self.pkg_byte_id) and (0x6D != self.uart_pkg[self.pkg_byte_id])
+                        or  ( 1 == self.pkg_byte_id) and (0x72 != self.uart_pkg[self.pkg_byte_id])
+                        or  ( 2 == self.pkg_byte_id) and (0x02 != self.uart_pkg[self.pkg_byte_id])
+                        or  ( 3 == self.pkg_byte_id) and (0x00 != self.uart_pkg[self.pkg_byte_id])
+                        or  (14 == self.pkg_byte_id) and (0x0A != self.uart_pkg[self.pkg_byte_id])
+                        or  (15 == self.pkg_byte_id) and (0x0D != self.uart_pkg[self.pkg_byte_id]) ):
+                        self.pkg_byte_id = 0
                     else:
-                        self.index_in_pkg += 1
-                        if(self.index_in_pkg >= 16):
+                        self.pkg_byte_id += 1
+                        if(self.pkg_byte_id >= 16):
                             DL = self.uart_pkg[6]
                             DH = self.uart_pkg[7]
                             distance = (DH << 8) | DL
@@ -525,7 +528,7 @@ class IndoorLocation(QObject):
                             
                             self.log('%s' %('r0: %03d, r1: %03d, r2: %03d' %(self.Anchor0['r'], self.Anchor1['r'], self.Anchor2['r'])))
                             
-                            self.index_in_pkg = 0
+                            self.pkg_byte_id = 0
                             pass
                         pass
                     
@@ -546,23 +549,23 @@ class IndoorLocation(QObject):
         
         if(self.port.isopen):
             try:
-                if(port.port.in_waiting > 0):           # inWaiting()
+                if(port.port.in_waiting > 0):
                     new_bytes = port.port.read()
-                    # self.log('%02d : %s' %(self.index_in_pkg, new_bytes))
+                    # self.log('%02d : %s' %(self.pkg_byte_id, new_bytes))
                     new_str = new_bytes.hex()
                     new_bytes_0 = new_bytes[0]
                     # print(type(new_bytes_0), new_bytes_0)
                     
-                    self.uart_pkg[self.index_in_pkg] = new_bytes_0
+                    self.uart_pkg[self.pkg_byte_id] = new_bytes_0
                     
-                    if(     ( 0 == self.index_in_pkg) and (0xFF != self.uart_pkg[self.index_in_pkg])
-                        or  ( 1 == self.index_in_pkg) and (0x02 != self.uart_pkg[self.index_in_pkg])
-                        or  ( 2 == self.index_in_pkg) and (0x00 != self.uart_pkg[self.index_in_pkg])
-                        or  ( 3 == self.index_in_pkg) and (0x04 != self.uart_pkg[self.index_in_pkg]) ):
-                        self.index_in_pkg = 0
+                    if(     ( 0 == self.pkg_byte_id) and (0xFF != self.uart_pkg[self.pkg_byte_id])
+                        or  ( 1 == self.pkg_byte_id) and (0x02 != self.uart_pkg[self.pkg_byte_id])
+                        or  ( 2 == self.pkg_byte_id) and (0x00 != self.uart_pkg[self.pkg_byte_id])
+                        or  ( 3 == self.pkg_byte_id) and (0x04 != self.uart_pkg[self.pkg_byte_id]) ):
+                        self.pkg_byte_id = 0
                     else:
-                        self.index_in_pkg += 1
-                        if(self.index_in_pkg >= 32):
+                        self.pkg_byte_id += 1
+                        if(self.pkg_byte_id >= 32):
                             X_H = self.uart_pkg[9]
                             X_L = self.uart_pkg[10]
                             Tag_x = (X_H << 8) | X_L
@@ -598,13 +601,8 @@ class IndoorLocation(QObject):
                             # print('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, r0, r1, r2))
                             self.log('%s' %('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, r0, r1, r2)))
                             
-                            # self.log('%s' %('T(%+03d, %+03d) r0:%+04d, r1:%+04d, r2:%+04d' %(self.Tag['x'], self.Tag['y'], r0, r1, r2)))
+                            self.pkg_byte_id = 0
                             
-                            self.index_in_pkg = 0
-                            pass
-                        pass
-                    
-                    # print()
                     # print(type(new_bytes), new_bytes)
                     # print(type(new_str), new_str)
                     
@@ -615,23 +613,32 @@ class IndoorLocation(QObject):
             except:
                 pass
     
-    def idl_rx_process_stop(self):
-        self.t_rx.stop()
-
-# class Thread_UartRx(threading.Thread):
-#     def __init__(self, name):
-#         threading.Thread.__init__(self)
-#         self.name = name
-    
-#     def run(self):
-#         print()
+    def receive_port_data_debug(self):
+        self.pkg_id += 1
+        port = self.port
         
-
+        if(port.isopen):
+            try:
+                num = port.port.in_waiting
+                if(num > 0):
+                    new_bytes = port.port.read(num)
+                    # print(new_bytes)
+                    print('% 6d-% 4dbyte: ' %(self.pkg_id, num), new_bytes)
+                    
+                    # new_str = new_bytes.hex()
+                    
+                    if(     (0xFF == new_bytes[0])
+                       and  (0x02 == new_bytes[1])  ):
+                        print('new_pkg')
+                        pass
+            except:
+                pass
+        pass
+    
 app = QApplication([])
 
 idl = IndoorLocation()
 idl.ui_main.show()
-# idl.ui_main.MainWindow.addToolBar(NavigationToolbar(idl.canvas_2d_matplotlib.toolBar, app))
 
 timer = QTimer()
 timer.timeout.connect(idl.receive_port_data)

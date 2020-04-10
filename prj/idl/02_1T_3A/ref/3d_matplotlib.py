@@ -26,9 +26,9 @@ ax.scatter(x, y, zs=0, zdir='y', c=c_list, label='points in (x, z)')
 
 # Make legend, set axes limits and labels
 ax.legend()
-ax.set_xlim(-5, 5)
-ax.set_ylim(-5, 5)
-ax.set_zlim(-5, 5)
+ax.set_xlim(0, 1)
+ax.set_ylim(0, 1)
+ax.set_zlim(0, 1)
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')

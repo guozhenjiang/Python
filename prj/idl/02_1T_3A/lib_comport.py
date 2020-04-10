@@ -17,6 +17,8 @@ class Port(QObject):
         self.rtscts = False                 # 是否启用 Request To Send and Clean To Send
         self.dsrdtr = False                 # 是否启用 Data Set Ready and Data Terminal Ready
         self.isopen = False                 # 是否已经打开
+        
+        self.bytes_rx = b''
     
     def scan(self):
         # 更新 self.valid
