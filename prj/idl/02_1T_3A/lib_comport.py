@@ -66,6 +66,9 @@ class Port(QObject):
                                             inter_byte_timeout  = None,             # 字节间超时
                                             exclusive           = None)             # 互斥访问模式
                 
+                self.port.flushInput()
+                self.port.flushOutput()
+                
                 self.isopen = True
                 # print('成功')
             except:             # 操作失败
