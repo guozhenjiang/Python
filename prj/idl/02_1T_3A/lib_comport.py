@@ -1,6 +1,7 @@
 import serial
 import serial.tools.list_ports
 from PySide2.QtCore import QObject
+import time
 
 class Port(QObject):
     def __init__(self):
@@ -18,7 +19,10 @@ class Port(QObject):
         self.dsrdtr = False                 # 是否启用 Data Set Ready and Data Terminal Ready
         self.isopen = False                 # 是否已经打开
         
-        self.bytes_rx = b''
+        self.read_id = 0                    # 端口打开后第几次读取
+        self.read_stamp = time.perf_counter()   # time.perf_counter() 返回浮点数 表示程序持续运行的秒数
+        self.read_stamp_last = self.read_stamp
+        self.rx_cache = bytes()
     
     def scan(self):
         # 更新 self.valid
@@ -47,14 +51,16 @@ class Port(QObject):
         self.stop = dictStopBit[str_stop_bit]
     
     def open_close(self):
+        # 端口已打开 本次操作时要关闭
         if(self.isopen):
             self.port.close()
             self.isopen = False
             # print('%s 已关闭' %(self.name))
+        
+        # 端口已关闭 本次操作时要打开
         else:
+            # 尝试打开端口
             try:
-                # print('尝试打开 %s ' %(self.name), self.baud, self.byte, self.parity, self.stop, self.xonxoff, self.rtscts, self.dsrdtr, end=' ')
-                
                 self.port = serial.Serial(  port                = self.name,        # 端口号
                                             baudrate            = self.baud,        # 波特率
                                             bytesize            = self.byte,        # 位宽
@@ -67,17 +73,17 @@ class Port(QObject):
                                             dsrdtr              = self.dsrdtr,      # 硬件流控 DSR/DTR
                                             inter_byte_timeout  = None,             # 字节间超时
                                             exclusive           = None)             # 互斥访问模式
-                
+            # 端口打开失败
+            except:
+                pass
+            
+            # 端口打开成功
+            else:
                 self.port.flushInput()
                 self.port.flushOutput()
+                self.read_id = 0
                 
                 self.isopen = True
-                # print('成功')
-            except:             # 操作失败
-                pass
-                # print('失败')
-            else:               # 操作成功
-                
                 pass
 
 '''

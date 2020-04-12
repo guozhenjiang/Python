@@ -12,12 +12,12 @@ class PortComboBox(QComboBox):
     # 初始化
     def __init__(self, parent = None):
         super(PortComboBox, self).__init__(parent)
-        print('ComPort_ComboBox_init')
+        # print('ComPort_ComboBox_init')
 
     # 重写 showPopup 函数
     def showPopup(self):
-        print('signal_PortComboBox_showPopup')
+        # print('signal_PortComboBox_showPopup')
         self.signal_PortComboBox_showPopup.emit()
         
-        print('signal continue: showPopup')
+        # print('signal continue: showPopup')
         QComboBox.showPopup(self)   # 弹出选项框

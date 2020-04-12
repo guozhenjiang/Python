@@ -65,7 +65,6 @@ class IndoorLocation(QObject):
         self.Anchor2['z'] = 0.0
         self.Anchor2['r'] = 80
         
-        self.pkg_id = 0
         self.pkg_byte_id = 0
         self.uart_pkg = np.zeros(100, dtype=int, order='C')         # 新包缓存
         
@@ -390,6 +389,7 @@ class IndoorLocation(QObject):
         self.clear_display_2d_matplotlib()
         self.axes_2d_static.figure.canvas.draw()
         
+        self.port.read_id = 0
         self.pkg_byte_id = 0
         
         self.log('清空接收')
@@ -614,23 +614,48 @@ class IndoorLocation(QObject):
                 pass
     
     def receive_port_data_debug(self):
-        self.pkg_id += 1
         port = self.port
+        data_text = self.ui_main.plainTextEdit_Hex
         
         if(port.isopen):
             try:
                 num = port.port.in_waiting
                 if(num > 0):
-                    new_bytes = port.port.read(num)
-                    # print(new_bytes)
-                    print('% 6d-% 4dbyte: ' %(self.pkg_id, num), new_bytes)
+                    new_bytes = port.port.read(num)                 # 读取串口接收缓冲区的数据 读到的类型是 bytes
+                    port.read_id += 1                               # read_id 端口打开后第几次读取
                     
-                    # new_str = new_bytes.hex()
+                    # port.read_stamp = time.perf_counter()           # 测量读取时间间隔 time.perf_counter() 返回浮点数 表示程序持续运行的秒数
+                    # gap = port.read_stamp - port.read_stamp_last
+                    # port.read_stamp_last = port.read_stamp
                     
-                    if(     (0xFF == new_bytes[0])
-                       and  (0x02 == new_bytes[1])  ):
-                        print('new_pkg')
-                        pass
+                    # print('[% 10.3f][% 8d][% 4dbyte]:' %(gap, port.read_id, num), new_bytes)
+                    port.rx_cache += new_bytes
+                    # print('\r\n', len(port.rx_cache), 'port.rx_cache:', port.rx_cache)
+                    
+                    while(len(port.rx_cache) >=32):                 # 至少收到了一个包
+                        # print(port.rx_cache[0:32])
+                        # port.rx_cache = port.rx_cache[32:]
+                        
+                        if(         (0x01 == port.rx_cache[0])      # 帧头正确
+                            and     (0x02 == port.rx_cache[1])  ):
+                            # 处理一个包
+                            print(port.rx_cache[0:32])
+                            port.rx_cache = port.rx_cache[32:]
+                            pass
+                        else:
+                            port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
+                            pass
+                        
+                    
+                    # new_str = new_bytes.hex(space=' ')
+                    # print(new_str)
+                    
+                    # data_text.appendPlainText(new_str)
+                    
+                    # # if(     (0xFF == new_bytes[0])
+                    # #    and  (0x02 == new_bytes[1])  ):
+                    # #     print('new_pkg')
+                    # #     pass
             except:
                 pass
         pass
