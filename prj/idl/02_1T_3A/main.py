@@ -19,6 +19,9 @@ from matplotlib.backends.backend_qt5agg import (FigureCanvas, NavigationToolbar2
 import numpy as np
 import matplotlib.pyplot as plt
 
+import struct
+
+
 '''
     QComboBox
         https://doc.qt.io/qtforpython/PySide2/QtWidgets/QComboBox.html
@@ -35,7 +38,8 @@ class IndoorLocation(QObject):
     def __init__(self):
         self.name = 'IDL'
         
-        Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0, 'r':0.0}
+        # Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0, 'r':0.0}
+        Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0}
         Tag_t = {'name':'Tag', 'r0':0.0, 'r1':0.0, 'r2':0.0,'x':50, 'y':50, 'z':0.0}
         
         self.Anchor0 = Anchor_t.copy()
@@ -49,21 +53,21 @@ class IndoorLocation(QObject):
         self.Anchor0['x'] = 0
         self.Anchor0['y'] = 0
         self.Anchor0['z'] = 0.0
-        self.Anchor0['r'] = 50.0
+        # self.Anchor0['r'] = 50.0
         
         self.Anchor1['name'] = 'Anchor1'
         self.Anchor1['color'] = 'g'
         self.Anchor1['x'] = 300.0
         self.Anchor1['y'] = 0.0
         self.Anchor1['z'] = 0.0
-        self.Anchor1['r'] = 100.0
+        # self.Anchor1['r'] = 100.0
         
         self.Anchor2['name'] = 'Anchor2'
         self.Anchor2['color'] = 'b'
         self.Anchor2['x'] = 0.0
         self.Anchor2['y'] = 300.0
         self.Anchor2['z'] = 0.0
-        self.Anchor2['r'] = 80
+        # self.Anchor2['r'] = 80
         
         self.pkg_byte_id = 0
         self.uart_pkg = np.zeros(100, dtype=int, order='C')         # 新包缓存
@@ -171,8 +175,8 @@ class IndoorLocation(QObject):
         
         self.update_2d_matplotlib_limit()
         
-        self.timer_2d_matplotlib = self.canvas_2d_matplotlib.new_timer(100, [(self.update_display, (), {})])
-        self.timer_2d_matplotlib.start()
+        # self.timer_2d_matplotlib = self.canvas_2d_matplotlib.new_timer(100, [(self.update_display, (), {})])
+        # self.timer_2d_matplotlib.start()
         
         # 将 Matlabplotlib 3D 图像嵌入界面
         layout = self.ui_main.horizontalLayout_3D_Matplotlib    # <class 'PySide2.QtWidgets.QHBoxLayout'>
@@ -182,6 +186,27 @@ class IndoorLocation(QObject):
         self.axes_3d_static.grid(True)
         
         self.ui_main.tableWidget_DataInfo.setHorizontalHeaderLabels(['x', 'y', 'z'])
+        
+        self.slot_mode_changed()
+    
+    def init_signal_slot(self):
+        self.log('初始化 Signal Slot')
+        ui = self.ui_main
+        
+        ui.comboBox_name.signal_PortComboBox_showPopup.connect(self.slot_PortComboBox_showPopup)
+        ui.comboBox_name.currentTextChanged.connect(    lambda:self.slot_port_name())
+        ui.comboBox_baud.currentTextChanged.connect(    lambda:self.slot_port_baud())
+        ui.comboBox_byte.currentTextChanged.connect(    lambda:self.slot_port_byte())
+        ui.comboBox_parity.currentTextChanged.connect(  lambda:self.slot_port_parity())
+        ui.comboBox_stop.currentTextChanged.connect(    lambda:self.slot_port_stop())
+        ui.checkBox_xonxoff.stateChanged.connect(       lambda:self.slot_port_xonxoff())
+        ui.checkBox_rtscts.stateChanged.connect(        lambda:self.slot_port_rtscts())
+        ui.checkBox_dsrdtr.stateChanged.connect(        lambda:self.slot_port_dsrdtr())
+        ui.pushButton_open_close.clicked.connect(       lambda:self.slot_port_open_close())
+        ui.pushButton_CleanReceive.clicked.connect(     lambda:self.slot_clean_receive())
+        ui.pushButton_StartSend.clicked.connect(        lambda:self.slot_send())
+        ui.tableWidget_DataInfo.itemChanged.connect(    lambda:self.slot_tableWidget_Anchor_changed())
+        ui.comboBox_Mode.currentTextChanged.connect(    lambda:self.slot_mode_changed())
     
     def update_display(self):
         if(self.port.isopen):
@@ -196,9 +221,9 @@ class IndoorLocation(QObject):
     def update_display_DongHan(self):
         self.clear_display_2d_matplotlib()
         
-        self.draw_anchor_circle(self.Anchor0)
-        self.draw_anchor_circle(self.Anchor1)
-        self.draw_anchor_circle(self.Anchor2)
+        # self.draw_anchor_circle(self.Anchor0)
+        # self.draw_anchor_circle(self.Anchor1)
+        # self.draw_anchor_circle(self.Anchor2)
         
         self.draw_anchor_to_anchor_line(self.Anchor0, self.Anchor1)
         self.draw_anchor_to_anchor_line(self.Anchor0, self.Anchor2)
@@ -225,11 +250,23 @@ class IndoorLocation(QObject):
         self.circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.2, picker=5)
         self.axes_2d_static.add_artist(self.circle)
         pass
-        
+    
+    def draw_circle(self, x, y, r, c):
+        circle = plt.Circle((x, y), r, color=c, ec='c', alpha=0.5, picker=5)
+    
     def draw_anchor_circle(self, anchor):
         self.circle = plt.Circle((anchor['x'], anchor['y']), anchor['r'], color=anchor['color'], ec='c', alpha=0.5, picker=5)
         self.axes_2d_static.add_artist(self.circle)
         pass
+    
+    def draw_anchor_circles(self):
+        # self.draw_anchor_circle(self.Anchor0)
+        # self.draw_anchor_circle(self.Anchor1)
+        # self.draw_anchor_circle(self.Anchor2)
+        
+        draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.Tag['r0'], 'r')
+        draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.Tag['r1'], 'g')
+        draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.Tag['r2'], 'b')
         
     def draw_anchor_to_anchor_line(self, anchor_0, anchor_1):
         x0 = anchor_0['x']
@@ -249,30 +286,16 @@ class IndoorLocation(QObject):
         self.axes_2d_static.add_artist(circle)
         pass
     
+    def draw_anchor_points(self):
+        self.draw_anchor_point(self.Anchor0, 'r')
+        self.draw_anchor_point(self.Anchor1, 'g')
+        self.draw_anchor_point(self.Anchor2, 'b')
+    
     def draw_Tag_to_3_Anchor_(self, d1, d2, d3):
         pass
     
-    def init_signal_slot(self):
-        self.log('初始化 Signal Slot')
-        ui = self.ui_main
-        
-        ui.comboBox_name.signal_PortComboBox_showPopup.connect(self.slot_PortComboBox_showPopup)
-        ui.comboBox_name.currentTextChanged.connect(    lambda:self.slot_port_name())
-        ui.comboBox_baud.currentTextChanged.connect(    lambda:self.slot_port_baud())
-        ui.comboBox_byte.currentTextChanged.connect(    lambda:self.slot_port_byte())
-        ui.comboBox_parity.currentTextChanged.connect(  lambda:self.slot_port_parity())
-        ui.comboBox_stop.currentTextChanged.connect(    lambda:self.slot_port_stop())
-        ui.checkBox_xonxoff.stateChanged.connect(       lambda:self.slot_port_xonxoff())
-        ui.checkBox_rtscts.stateChanged.connect(        lambda:self.slot_port_rtscts())
-        ui.checkBox_dsrdtr.stateChanged.connect(        lambda:self.slot_port_dsrdtr())
-        ui.pushButton_open_close.clicked.connect(       lambda:self.slot_port_open_close())
-        ui.pushButton_CleanReceive.clicked.connect(     lambda:self.slot_clean_receive())
-        ui.pushButton_StartSend.clicked.connect(        lambda:self.slot_send())
-        ui.tableWidget_DataInfo.itemChanged.connect(    lambda:self.slot_tableWidget_Anchor_changed())
-        ui.comboBox_Mode.currentTextChanged.connect(    lambda:self.slot_mode_changed())
-    
     def clear_display_2d_matplotlib(self):
-        self.log('清除当前显示')
+        # self.log('清除当前显示')
         self.axes_2d_static.clear()                             # 清除当前显示
         self.axes_2d_static.grid(True)                          # 显示网格
         self.axes_2d_static.set_xlim(self.x_min, self.x_max)    # 设置坐标轴显示范围
@@ -283,22 +306,25 @@ class IndoorLocation(QObject):
     def slot_mode_changed(self):
         self.log('模式切换到 %s' %(self.ui_main.comboBox_Mode.currentText()))
         
-        # 清除当前显示
-        self.clear_display_2d_matplotlib()
+        if('debug_rx' == self.ui_main.comboBox_Mode.currentText()):
+            self.clear_display_2d_matplotlib()
+            self.draw_anchor_points()
+            self.axes_2d_static.figure.canvas.draw()
+            pass
         
-        if('DongHan' == self.ui_main.comboBox_Mode.currentText()):
+        elif('DongHan' == self.ui_main.comboBox_Mode.currentText()):
+            self.clear_display_2d_matplotlib()
+            self.draw_anchor_points()
+            self.axes_2d_static.figure.canvas.draw()
             pass
         elif('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
-            # 绘制基站坐标点
-            self.log('画坐标点')
-            self.draw_anchor_point(self.Anchor0, 'r')
-            self.draw_anchor_point(self.Anchor1, 'g')
-            self.draw_anchor_point(self.Anchor2, 'b')
-            
-            # 绘制期望轨迹线
+            self.clear_display_2d_matplotlib()
+            self.draw_anchor_points()
             self.draw_ref_line()
+            self.axes_2d_static.figure.canvas.draw()
             pass
-        pass
+        else:
+            pass
     
     def slot_PortComboBox_showPopup(self):
         self.log('扫描端口')
@@ -386,8 +412,8 @@ class IndoorLocation(QObject):
     def slot_clean_receive(self):
         self.ui_main.plainTextEdit_Hex.clear()
         self.ui_main.plainTextEdit_Ascii.clear()
-        self.clear_display_2d_matplotlib()
-        self.axes_2d_static.figure.canvas.draw()
+        
+        self.slot_mode_changed()
         
         self.port.read_id = 0
         self.pkg_byte_id = 0
@@ -468,6 +494,8 @@ class IndoorLocation(QObject):
         self.Anchor2['z'] = float(self.ui_main.tableWidget_DataInfo.item(2, 2).text())
         
         self.update_2d_matplotlib_limit()
+        
+        self.slot_mode_changed()
         
         pass
     
@@ -622,44 +650,85 @@ class IndoorLocation(QObject):
                 num = port.port.in_waiting
                 if(num > 0):
                     new_bytes = port.port.read(num)                 # 读取串口接收缓冲区的数据 读到的类型是 bytes
+                    port.rx_cache += new_bytes                      # 添加到串口接收缓存中
                     port.read_id += 1                               # read_id 端口打开后第几次读取
                     
-                    # port.read_stamp = time.perf_counter()           # 测量读取时间间隔 time.perf_counter() 返回浮点数 表示程序持续运行的秒数
-                    # gap = port.read_stamp - port.read_stamp_last
-                    # port.read_stamp_last = port.read_stamp
+                    port.read_stamp = time.perf_counter()           # 测量读取时间间隔 time.perf_counter() 返回浮点数 表示程序持续运行的秒数
+                    gap = port.read_stamp - port.read_stamp_last
+                    port.read_stamp_last = port.read_stamp
                     
-                    # print('[% 10.3f][% 8d][% 4dbyte]:' %(gap, port.read_id, num), new_bytes)
-                    port.rx_cache += new_bytes
-                    # print('\r\n', len(port.rx_cache), 'port.rx_cache:', port.rx_cache)
+                    rx_cache_len = len(port.rx_cache)
                     
-                    while(len(port.rx_cache) >=32):                 # 至少收到了一个包
-                        # print(port.rx_cache[0:32])
+                    print('[% 8.3fs][id:% 8d][+%  4dB = % 4dB]:' %(gap, port.read_id, num, rx_cache_len), port.rx_cache)
+                    
+                    print('进入循环之前:', len(port.rx_cache) >=32)
+                    while len(port.rx_cache) >=32:                 # 至少收到了一个包
                         # port.rx_cache = port.rx_cache[32:]
+                        # print('清除一个包长:', len(port.rx_cache))
                         
-                        if(         (0x01 == port.rx_cache[0])      # 帧头正确
-                            and     (0x02 == port.rx_cache[1])  ):
+                        # print('现有缓存长度:', len(port.rx_cache))
+                        if((0xFF == port.rx_cache[0]) and (0x02 == port.rx_cache[1])):
+                            
                             # 处理一个包
-                            print(port.rx_cache[0:32])
+                            new_pkg = port.rx_cache[0:32]
+                            
+                            new_str = new_pkg.hex().upper()
+                            data_text.appendPlainText(new_str)
+                            
+                            X_H = new_pkg[9]
+                            X_L = new_pkg[10]
+                            # Tag_x = (X_H << 8) | X_L
+                            Tag_x = int(np.int16((X_H << 8) | X_L))
+                            self.Tag['x'] = Tag_x
+                            s = new_pkg[9:11]
+                            # val = struct.unpack('<h', s)
+                            val = int.from_bytes(s, byteorder='big', signed=True)
+                            print('[%02X][%02X] -> [%04X] : val = ' %(new_pkg[9], new_pkg[10], Tag_x), val)
+                            
+                            Y_H = new_pkg[11]
+                            Y_L = new_pkg[12]
+                            # Tag_y = (Y_H << 8) | Y_L
+                            Tag_y = int(np.int16((Y_H << 8) | Y_L))
+                            self.Tag['y'] = Tag_y
+                            
+                            # print('(x, y) = ', Tag_x, Tag_y)
+                            
+                            R0_H = new_pkg[13]
+                            R0_L = new_pkg[14]
+                            r0 = (R0_H << 8) | R0_L
+                            self.Tag['r0'] = r0
+                            
+                            R1_H = new_pkg[15]
+                            R1_L = new_pkg[16]
+                            r1 = (R1_H << 8) | R1_L
+                            self.Tag['r1'] = r1
+                            
+                            R2_H = new_pkg[17]
+                            R2_L = new_pkg[18]
+                            r2 = (R2_H << 8) | R2_L
+                            self.Tag['r2'] = r2
+                            
+                            # self.log('(% 4d, % 4d) [% 4d, % 4d, % 4d]' %(self.Tag['x'], self.Tag['y'], self.Tag['r0'], self.Tag['r1'], self.Tag['r2']))
+                            
+                        #     # 已处理部分清除
                             port.rx_cache = port.rx_cache[32:]
-                            pass
+                            print('解析一个包后缓存长度:', len(port.rx_cache))
+                        #     print('解析一个包后:', len(port.rx_cache) >=32)
+                            
+                            # 绘制新的点
+                            # self.clear_display_2d_matplotlib()
+                            self.draw_tag_point()
+                            # self.draw_anchor_circles()
+                            self.axes_2d_static.figure.canvas.draw()
                         else:
+                        #     # print('[% 8.3fs][id:% 8d][+% 4dB = % 4dB]:' %(gap, port.read_id, num, rx_cache_len), port.rx_cache)
+                            print('finding_header...')
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
-                            pass
-                        
-                    
-                    # new_str = new_bytes.hex(space=' ')
-                    # print(new_str)
-                    
-                    # data_text.appendPlainText(new_str)
-                    
-                    # # if(     (0xFF == new_bytes[0])
-                    # #    and  (0x02 == new_bytes[1])  ):
-                    # #     print('new_pkg')
-                    # #     pass
             except:
-                pass
+                print('read_serial_error')
+            
+    def main_loop(self):
         pass
-    
 app = QApplication([])
 
 idl = IndoorLocation()

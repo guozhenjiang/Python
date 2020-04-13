@@ -82,6 +82,7 @@ class Port(QObject):
                 self.port.flushInput()
                 self.port.flushOutput()
                 self.read_id = 0
+                self.rx_cache = bytes()
                 
                 self.isopen = True
                 pass

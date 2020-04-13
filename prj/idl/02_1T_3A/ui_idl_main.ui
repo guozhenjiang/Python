@@ -306,10 +306,10 @@ color: rgb(0, 255, 127);</string>
                 <enum>Qt::LeftToRight</enum>
                </property>
                <property name="currentText">
-                <string>115200</string>
+                <string>1000000</string>
                </property>
                <property name="currentIndex">
-                <number>12</number>
+                <number>22</number>
                </property>
                <item>
                 <property name="text">
@@ -646,11 +646,20 @@ color: rgb(0, 255, 127);</string>
     <number>2</number>
    </attribute>
    <widget class="QWidget" name="widget_DockHex">
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
      <item>
       <widget class="QPlainTextEdit" name="plainTextEdit_Hex">
        <property name="verticalScrollBarPolicy">
         <enum>Qt::ScrollBarAlwaysOn</enum>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarAsNeeded</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="lineWrapMode">
+        <enum>QPlainTextEdit::NoWrap</enum>
        </property>
        <property name="placeholderText">
         <string>Hex</string>
@@ -700,7 +709,7 @@ color: rgb(0, 255, 127);</string>
     <number>2</number>
    </attribute>
    <widget class="QWidget" name="widget_DockAscii">
-    <layout class="QHBoxLayout" name="horizontalLayout_4">
+    <layout class="QVBoxLayout" name="verticalLayout_7">
      <item>
       <widget class="QPlainTextEdit" name="plainTextEdit_Ascii">
        <property name="verticalScrollBarPolicy">
@@ -719,7 +728,7 @@ color: rgb(0, 255, 127);</string>
     <number>2</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
-    <layout class="QHBoxLayout" name="horizontalLayout_8">
+    <layout class="QVBoxLayout" name="verticalLayout_8">
      <item>
       <widget class="QTableWidget" name="tableWidget_DataInfo">
        <property name="sizePolicy">
@@ -873,6 +882,19 @@ color: rgb(0, 255, 127);</string>
         </property>
        </item>
       </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>5</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </widget>
