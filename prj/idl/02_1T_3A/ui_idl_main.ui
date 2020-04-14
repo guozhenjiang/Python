@@ -306,10 +306,10 @@ color: rgb(0, 255, 127);</string>
                 <enum>Qt::LeftToRight</enum>
                </property>
                <property name="currentText">
-                <string>1000000</string>
+                <string>115200</string>
                </property>
                <property name="currentIndex">
-                <number>22</number>
+                <number>12</number>
                </property>
                <item>
                 <property name="text">
@@ -724,6 +724,9 @@ color: rgb(0, 255, 127);</string>
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_DataInfo">
+   <property name="windowTitle">
+    <string>Info</string>
+   </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
    </attribute>
@@ -823,7 +826,7 @@ color: rgb(0, 255, 127);</string>
        </item>
        <item row="1" column="0">
         <property name="text">
-         <string>300</string>
+         <string>150</string>
         </property>
        </item>
        <item row="1" column="1">
@@ -848,7 +851,7 @@ color: rgb(0, 255, 127);</string>
        </item>
        <item row="2" column="1">
         <property name="text">
-         <string>300</string>
+         <string>150</string>
         </property>
        </item>
        <item row="2" column="2">
@@ -878,7 +881,7 @@ color: rgb(0, 255, 127);</string>
        </item>
        <item row="3" column="3">
         <property name="text">
-         <string>0</string>
+         <string/>
         </property>
        </item>
       </widget>

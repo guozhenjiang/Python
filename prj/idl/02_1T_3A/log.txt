@@ -1,4 +1,3 @@
-
 载入 ./ui_idl_main.ui
 初始化 UI
 模式切换到 debug_rx

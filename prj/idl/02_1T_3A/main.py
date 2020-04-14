@@ -7,7 +7,7 @@ from lib_comport_ComboBox import *
 
 import time
 import datetime
-import _thread, threading
+import threading
 import sys
 
 # import pyglet
@@ -113,7 +113,7 @@ class IndoorLocation(QObject):
         self.log_stamp_last = self.log_stamp
         
         if(log_stamp_det > 0.1):
-            new_line = '\r\n'
+            new_line = ''   #'\r\n'
         else:
             new_line = ''
         
@@ -221,10 +221,6 @@ class IndoorLocation(QObject):
     def update_display_DongHan(self):
         self.clear_display_2d_matplotlib()
         
-        # self.draw_anchor_circle(self.Anchor0)
-        # self.draw_anchor_circle(self.Anchor1)
-        # self.draw_anchor_circle(self.Anchor2)
-        
         self.draw_anchor_to_anchor_line(self.Anchor0, self.Anchor1)
         self.draw_anchor_to_anchor_line(self.Anchor0, self.Anchor2)
         self.draw_anchor_to_anchor_line(self.Anchor1, self.Anchor2)
@@ -247,26 +243,19 @@ class IndoorLocation(QObject):
         pass
     
     def draw_tag_point(self):
-        self.circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.2, picker=5)
-        self.axes_2d_static.add_artist(self.circle)
+        # self.circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.2, picker=5)
+        circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.8, picker=5)
+        self.axes_2d_static.add_artist(circle)
         pass
     
     def draw_circle(self, x, y, r, c):
-        circle = plt.Circle((x, y), r, color=c, ec='c', alpha=0.5, picker=5)
-    
-    def draw_anchor_circle(self, anchor):
-        self.circle = plt.Circle((anchor['x'], anchor['y']), anchor['r'], color=anchor['color'], ec='c', alpha=0.5, picker=5)
-        self.axes_2d_static.add_artist(self.circle)
-        pass
+        circle = plt.Circle((x, y), r, color=c, ec='c', alpha=0.2, picker=5)
+        self.axes_2d_static.add_artist(circle)
     
     def draw_anchor_circles(self):
-        # self.draw_anchor_circle(self.Anchor0)
-        # self.draw_anchor_circle(self.Anchor1)
-        # self.draw_anchor_circle(self.Anchor2)
-        
-        draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.Tag['r0'], 'r')
-        draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.Tag['r1'], 'g')
-        draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.Tag['r2'], 'b')
+        self.draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.Tag['r0'], 'r')
+        self.draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.Tag['r1'], 'g')
+        self.draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.Tag['r2'], 'b')
         
     def draw_anchor_to_anchor_line(self, anchor_0, anchor_1):
         x0 = anchor_0['x']
@@ -309,6 +298,7 @@ class IndoorLocation(QObject):
         if('debug_rx' == self.ui_main.comboBox_Mode.currentText()):
             self.clear_display_2d_matplotlib()
             self.draw_anchor_points()
+            self.draw_anchor_circles()
             self.axes_2d_static.figure.canvas.draw()
             pass
         
@@ -466,7 +456,7 @@ class IndoorLocation(QObject):
         if(self.Anchor2['y'] > y_max):
             y_max = self.Anchor2['y']
         
-        self.keep_out = 100
+        self.keep_out = 200
         
         self.x_min = x_min - self.keep_out
         self.x_max = x_max + self.keep_out
@@ -659,16 +649,15 @@ class IndoorLocation(QObject):
                     
                     rx_cache_len = len(port.rx_cache)
                     
-                    print('[% 8.3fs][id:% 8d][+%  4dB = % 4dB]:' %(gap, port.read_id, num, rx_cache_len), port.rx_cache)
+                    # print('[% 8.3fs][id:% 8d][+%  4dB = % 4dB]:' %(gap, port.read_id, num, rx_cache_len), port.rx_cache)
                     
-                    print('进入循环之前:', len(port.rx_cache) >=32)
+                    # print('进入循环之前:', len(port.rx_cache) >=32)
                     while len(port.rx_cache) >=32:                 # 至少收到了一个包
                         # port.rx_cache = port.rx_cache[32:]
                         # print('清除一个包长:', len(port.rx_cache))
                         
                         # print('现有缓存长度:', len(port.rx_cache))
                         if((0xFF == port.rx_cache[0]) and (0x02 == port.rx_cache[1])):
-                            
                             # 处理一个包
                             new_pkg = port.rx_cache[0:32]
                             
@@ -677,21 +666,13 @@ class IndoorLocation(QObject):
                             
                             X_H = new_pkg[9]
                             X_L = new_pkg[10]
-                            # Tag_x = (X_H << 8) | X_L
                             Tag_x = int(np.int16((X_H << 8) | X_L))
                             self.Tag['x'] = Tag_x
-                            s = new_pkg[9:11]
-                            # val = struct.unpack('<h', s)
-                            val = int.from_bytes(s, byteorder='big', signed=True)
-                            print('[%02X][%02X] -> [%04X] : val = ' %(new_pkg[9], new_pkg[10], Tag_x), val)
                             
                             Y_H = new_pkg[11]
                             Y_L = new_pkg[12]
-                            # Tag_y = (Y_H << 8) | Y_L
                             Tag_y = int(np.int16((Y_H << 8) | Y_L))
                             self.Tag['y'] = Tag_y
-                            
-                            # print('(x, y) = ', Tag_x, Tag_y)
                             
                             R0_H = new_pkg[13]
                             R0_L = new_pkg[14]
@@ -708,24 +689,25 @@ class IndoorLocation(QObject):
                             r2 = (R2_H << 8) | R2_L
                             self.Tag['r2'] = r2
                             
-                            # self.log('(% 4d, % 4d) [% 4d, % 4d, % 4d]' %(self.Tag['x'], self.Tag['y'], self.Tag['r0'], self.Tag['r1'], self.Tag['r2']))
+                            self.log('(% 4d, % 4d) [% 4d, % 4d, % 4d] [% 4dB]' %(self.Tag['x'], self.Tag['y'], self.Tag['r0'], self.Tag['r1'], self.Tag['r2'], len(port.rx_cache)))
                             
                         #     # 已处理部分清除
                             port.rx_cache = port.rx_cache[32:]
-                            print('解析一个包后缓存长度:', len(port.rx_cache))
+                            # print('解析一个包后缓存长度:', len(port.rx_cache))
                         #     print('解析一个包后:', len(port.rx_cache) >=32)
                             
                             # 绘制新的点
-                            # self.clear_display_2d_matplotlib()
+                            self.clear_display_2d_matplotlib()
                             self.draw_tag_point()
-                            # self.draw_anchor_circles()
+                            self.draw_anchor_circles()
                             self.axes_2d_static.figure.canvas.draw()
                         else:
                         #     # print('[% 8.3fs][id:% 8d][+% 4dB = % 4dB]:' %(gap, port.read_id, num, rx_cache_len), port.rx_cache)
                             print('finding_header...')
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
-            except:
-                print('read_serial_error')
+            except Exception as e:
+                print('发生异常:')
+                print(e)
             
     def main_loop(self):
         pass
@@ -736,6 +718,10 @@ idl.ui_main.show()
 
 timer = QTimer()
 timer.timeout.connect(idl.receive_port_data)
-timer.start(1)
+timer.start(0)
+
+# thread = threading.Thread(target=idl.receive_port_data)
+# thread.setDaemon()
+# thread.start()
 
 app.exec_()
