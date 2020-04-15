@@ -33,14 +33,47 @@ import struct
         https://doc.qt.io/qtforpython/PySide2/QtWidgets/QGridLayout.html
 '''
 
+class Anchor():
+    name = ''
+    x = 0
+    y = 0
+    z = 0
+    
+    def __init__(self, name=None, x=None, y=None, z=None):
+        self.name = name
+        self.x = x
+        self.y = y
+        self.z = z
+
+class Tag():
+    name = ''
+    x = 0
+    y = 0
+    z = 0
+    
+    d0 = 0
+    d1 = 0
+    d2 = 0
+    
+    def __init__(self, name=None, x=None, y=None, z=None):
+        self.name = name
+        self.x = x
+        self.y = y
+        self.z = z
+
 class IndoorLocation(QObject):
+    anchor0 = Anchor()
+    anchor1 = Anchor()
+    anchor2 = Anchor()
+    tag = Tag()
+    
     # 实例化
     def __init__(self):
         self.name = 'IDL'
         
         # Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0, 'r':0.0}
         Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0}
-        Tag_t = {'name':'Tag', 'r0':0.0, 'r1':0.0, 'r2':0.0,'x':50, 'y':50, 'z':0.0}
+        Tag_t = {'name':'Tag', 'd0':0.0, 'd1':0.0, 'd2':0.0,'x':50, 'y':50, 'z':0.0}
         
         self.Anchor0 = Anchor_t.copy()
         self.Anchor1 = Anchor_t.copy()
@@ -71,6 +104,14 @@ class IndoorLocation(QObject):
         
         self.pkg_byte_id = 0
         self.uart_pkg = np.zeros(100, dtype=int, order='C')         # 新包缓存
+        
+        self.enter_qtimer_gap = 0
+        self.enter_qtimer_stamp = time.perf_counter()
+        self.enter_qtimer_stamp_last = self.enter_qtimer_stamp
+        
+        self.read_serial_gap = 0
+        self.read_serial_stamp = time.perf_counter()
+        self.read_serial_stamp_last = self.read_serial_stamp
         
         log_file_loc = './log.txt'
         print('以读写打开 %s' %(log_file_loc))
@@ -244,18 +285,21 @@ class IndoorLocation(QObject):
     
     def draw_tag_point(self):
         # self.circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.2, picker=5)
-        circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.8, picker=5)
+        # circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.8, picker=5)
+        circle = plt.Circle((self.tag.x, self.tag.y), 3, color='c', ec='c', alpha=0.8, picker=5)
         self.axes_2d_static.add_artist(circle)
-        pass
     
     def draw_circle(self, x, y, r, c):
         circle = plt.Circle((x, y), r, color=c, ec='c', alpha=0.2, picker=5)
         self.axes_2d_static.add_artist(circle)
     
     def draw_anchor_circles(self):
-        self.draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.Tag['r0'], 'r')
-        self.draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.Tag['r1'], 'g')
-        self.draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.Tag['r2'], 'b')
+        # self.draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.Tag['d0'], 'r')
+        # self.draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.Tag['d1'], 'g')
+        # self.draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.Tag['d2'], 'b')
+        self.draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.tag.d0, 'r')
+        self.draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.tag.d1, 'g')
+        self.draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.tag.d2, 'b')
         
     def draw_anchor_to_anchor_line(self, anchor_0, anchor_1):
         x0 = anchor_0['x']
@@ -289,8 +333,6 @@ class IndoorLocation(QObject):
         self.axes_2d_static.grid(True)                          # 显示网格
         self.axes_2d_static.set_xlim(self.x_min, self.x_max)    # 设置坐标轴显示范围
         self.axes_2d_static.set_ylim(self.y_min, self.y_max)
-        # self.axes_2d_static.figure.canvas.draw()
-        pass
     
     def slot_mode_changed(self):
         self.log('模式切换到 %s' %(self.ui_main.comboBox_Mode.currentText()))
@@ -544,7 +586,7 @@ class IndoorLocation(QObject):
                             distance = (DH << 8) | DL
                             self.Anchor2['r'] = distance
                             
-                            self.log('%s' %('r0: %03d, r1: %03d, r2: %03d' %(self.Anchor0['r'], self.Anchor1['r'], self.Anchor2['r'])))
+                            self.log('%s' %('d0: %03d, d1: %03d, d2: %03d' %(self.Anchor0['r'], self.Anchor1['r'], self.Anchor2['r'])))
                             
                             self.pkg_byte_id = 0
                             pass
@@ -596,28 +638,28 @@ class IndoorLocation(QObject):
                             
                             R0_H = self.uart_pkg[13]
                             R0_L = self.uart_pkg[14]
-                            r0 = (R0_H << 8) | R0_L
-                            self.Tag['r0'] = r0
+                            d0 = (R0_H << 8) | R0_L
+                            self.Tag['d0'] = d0
                             
                             R1_H = self.uart_pkg[15]
                             R1_L = self.uart_pkg[16]
-                            r1 = (R1_H << 8) | R1_L
-                            self.Tag['r1'] = r1
+                            d1 = (R1_H << 8) | R1_L
+                            self.Tag['d1'] = d1
                             
                             R2_H = self.uart_pkg[17]
                             R2_L = self.uart_pkg[18]
-                            r2 = (R2_H << 8) | R2_L
-                            self.Tag['r2'] = r2
+                            d2 = (R2_H << 8) | R2_L
+                            self.Tag['d2'] = d2
                             
                             # print('X:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] Y:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] D0:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] D1:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] D2:[0x%02X 0x%02X -> 0x%04X(%+ 6d)]'\
                             #         %(  X_H, X_L, Tag_x, Tag_x,\
                                         # Y_H, Y_L, Tag_y, Tag_y,\
-                                        # R0_H, R0_L, r0, r0,\
-                                        # R1_H, R1_L, r1, r1,\
-                                        # R2_H, R2_L, r2, r2)   )
+                                        # R0_H, R0_L, d0, d0,\
+                                        # R1_H, R1_L, d1, d1,\
+                                        # R2_H, R2_L, d2, d2)   )
                             
-                            # print('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, r0, r1, r2))
-                            self.log('%s' %('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, r0, r1, r2)))
+                            # print('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, d0, d1, d2))
+                            self.log('%s' %('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, d0, d1, d2)))
                             
                             self.pkg_byte_id = 0
                             
@@ -635,93 +677,124 @@ class IndoorLocation(QObject):
         port = self.port
         data_text = self.ui_main.plainTextEdit_Hex
         
-        if(port.isopen):
+        self.enter_qtimer_stamp = time.perf_counter()           # 测量读取时间间隔 time.perf_counter() 返回浮点数 表示程序持续运行的秒数
+        self.enter_qtimer_gap = self.enter_qtimer_stamp - self.enter_qtimer_stamp_last
+        self.enter_qtimer_stamp_last = self.enter_qtimer_stamp
+        rx_cache_len = len(port.rx_cache)
+        
+        print(  '\r\n % 12.6fs after:%10.3fms rx:%03dB ' %(\
+                self.enter_qtimer_stamp,
+                (self.enter_qtimer_gap * 1000),
+                rx_cache_len),
+                end='' )
+        
+        if port.isopen and rx_cache_len<32:
             try:
                 num = port.port.in_waiting
+                
                 if(num > 0):
+                    # new_bytes = b'\xFF\x02\x00\x04\x00\x00\x00\x00\x00\x00\x09\x00\x10\x01\x15\x01\x16\x01\x17\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xAA\x55'
                     new_bytes = port.port.read(num)                 # 读取串口接收缓冲区的数据 读到的类型是 bytes
                     port.rx_cache += new_bytes                      # 添加到串口接收缓存中
+                    rx_cache_len = len(port.rx_cache)
                     port.read_id += 1                               # read_id 端口打开后第几次读取
                     
-                    port.read_stamp = time.perf_counter()           # 测量读取时间间隔 time.perf_counter() 返回浮点数 表示程序持续运行的秒数
-                    gap = port.read_stamp - port.read_stamp_last
-                    port.read_stamp_last = port.read_stamp
+                    self.read_serial_stamp = time.perf_counter()
+                    self.read_serial_gap = self.read_serial_stamp - self.read_serial_stamp_last
+                    self.read_serial_stamp_last = self.read_serial_stamp
                     
-                    rx_cache_len = len(port.rx_cache)
+                    print(  'after[%10.3f]ms read[%03d]B rx:%03dB ' %(\
+                            (self.read_serial_gap * 1000),
+                            num,
+                            rx_cache_len),
+                            end='' )
                     
-                    # print('[% 8.3fs][id:% 8d][+%  4dB = % 4dB]:' %(gap, port.read_id, num, rx_cache_len), port.rx_cache)
-                    
-                    # print('进入循环之前:', len(port.rx_cache) >=32)
-                    while len(port.rx_cache) >=32:                 # 至少收到了一个包
-                        # port.rx_cache = port.rx_cache[32:]
-                        # print('清除一个包长:', len(port.rx_cache))
-                        
-                        # print('现有缓存长度:', len(port.rx_cache))
+                    while (len(port.rx_cache) >= 32):                 # 至少收到了一个包
                         if((0xFF == port.rx_cache[0]) and (0x02 == port.rx_cache[1])):
                             # 处理一个包
                             new_pkg = port.rx_cache[0:32]
+                            port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
                             
                             new_str = new_pkg.hex().upper()
                             data_text.appendPlainText(new_str)
                             
+                            # self.log(   '[% 8.3fs][id:% 8d][+% 4dB = % 4dB] => (% 4d, % 4d) [% 4d, % 4d, % 4d] [% 4dB]'\
+                            #             %(  gap,
+                            #                 port.read_id,
+                            #                 num,
+                            #                 len(port.rx_cache),
+                            #                 self.Tag['x'],
+                            #                 self.Tag['y'],
+                            #                 self.Tag['d0'],
+                            #                 self.Tag['d1'],
+                            #                 self.Tag['d2'],
+                            #                 len(port.rx_cache)  )   )
+                            
+                            # gap = 0;
+                            # num = 0;
+                            
                             X_H = new_pkg[9]
                             X_L = new_pkg[10]
-                            Tag_x = int(np.int16((X_H << 8) | X_L))
-                            self.Tag['x'] = Tag_x
+                            x = int(np.int16((X_H << 8) | X_L))
+                            self.Tag['x'] = x
+                            self.tag.x = x
                             
                             Y_H = new_pkg[11]
                             Y_L = new_pkg[12]
-                            Tag_y = int(np.int16((Y_H << 8) | Y_L))
-                            self.Tag['y'] = Tag_y
+                            y = int(np.int16((Y_H << 8) | Y_L))
+                            self.Tag['y'] = y
+                            self.tag.y = y
                             
                             R0_H = new_pkg[13]
                             R0_L = new_pkg[14]
-                            r0 = (R0_H << 8) | R0_L
-                            self.Tag['r0'] = r0
+                            d0 = (R0_H << 8) | R0_L
+                            self.Tag['d0'] = d0
+                            self.tag.d0 = d0
                             
                             R1_H = new_pkg[15]
                             R1_L = new_pkg[16]
-                            r1 = (R1_H << 8) | R1_L
-                            self.Tag['r1'] = r1
+                            d1 = (R1_H << 8) | R1_L
+                            self.Tag['d1'] = d1
+                            self.tag.d1 = d1
                             
                             R2_H = new_pkg[17]
                             R2_L = new_pkg[18]
-                            r2 = (R2_H << 8) | R2_L
-                            self.Tag['r2'] = r2
+                            d2 = (R2_H << 8) | R2_L
+                            self.Tag['d2'] = d2
+                            self.tag.d2 = d2
                             
-                            self.log('(% 4d, % 4d) [% 4d, % 4d, % 4d] [% 4dB]' %(self.Tag['x'], self.Tag['y'], self.Tag['r0'], self.Tag['r1'], self.Tag['r2'], len(port.rx_cache)))
-                            
-                        #     # 已处理部分清除
-                            port.rx_cache = port.rx_cache[32:]
-                            # print('解析一个包后缓存长度:', len(port.rx_cache))
-                        #     print('解析一个包后:', len(port.rx_cache) >=32)
-                            
-                            # 绘制新的点
-                            self.clear_display_2d_matplotlib()
-                            self.draw_tag_point()
-                            self.draw_anchor_circles()
-                            self.axes_2d_static.figure.canvas.draw()
+                            # # 绘制新的点
+                            # self.clear_display_2d_matplotlib()
+                            # self.draw_tag_point()
+                            # self.draw_anchor_circles()
+                            # self.axes_2d_static.figure.canvas.draw()
                         else:
-                        #     # print('[% 8.3fs][id:% 8d][+% 4dB = % 4dB]:' %(gap, port.read_id, num, rx_cache_len), port.rx_cache)
+                            self.log('%s' %(port.rx_cache))
                             print('finding_header...')
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
             except Exception as e:
                 print('发生异常:')
                 print(e)
-            
-    def main_loop(self):
-        pass
-app = QApplication([])
+    
+    def update_graphic(self):
+        self.clear_display_2d_matplotlib()
+        self.draw_tag_point()
+        self.draw_anchor_points()
+        self.draw_anchor_circles()
+        self.axes_2d_static.figure.canvas.draw()
 
-idl = IndoorLocation()
-idl.ui_main.show()
+if __name__ == '__main__':
+    app = QApplication([])
 
-timer = QTimer()
-timer.timeout.connect(idl.receive_port_data)
-timer.start(0)
+    idl = IndoorLocation()
+    idl.ui_main.show()
 
-# thread = threading.Thread(target=idl.receive_port_data)
-# thread.setDaemon()
-# thread.start()
+    timer_SerialRx = QTimer()
+    timer_SerialRx.timeout.connect(idl.receive_port_data)
+    timer_SerialRx.start(0)
 
-app.exec_()
+    timer_UpdateGraphic = QTimer()
+    timer_UpdateGraphic.timeout.connect(idl.update_graphic)
+    timer_UpdateGraphic.start(50)
+
+    sys.exit(app.exec_())

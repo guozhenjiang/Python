@@ -9,7 +9,6 @@ import pyqtgraph as pg
 import numpy as np
 import sys
 
-
 class Visualizer(object):
     def __init__(self):
         self.traces = dict()
