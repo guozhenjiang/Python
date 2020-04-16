@@ -795,6 +795,6 @@ if __name__ == '__main__':
 
     timer_UpdateGraphic = QTimer()
     timer_UpdateGraphic.timeout.connect(idl.update_graphic)
-    timer_UpdateGraphic.start(50)
+    timer_UpdateGraphic.start(100)
 
     sys.exit(app.exec_())

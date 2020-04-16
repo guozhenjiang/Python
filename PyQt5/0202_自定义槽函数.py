@@ -1,4 +1,4 @@
-# https://www.learnpyqt.com/courses/start/creating-your-first-window/
+# https://www.learnpyqt.com/courses/start/signals-slots-events/
 
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
@@ -17,6 +17,13 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         
+        # SIGNAL: The connected function will be called whenever the window
+        # title is changed. The new title will be passed to the function.
+        self.windowTitleChanged.connect(self.my_custom_fn)        # 窗口标题发生变化时，槽函数被调用，新的标题作为参数
+        
+        # This sets the window title which will trigger all the above signals
+        # sending the new title to the attached functions or lambdas as the
+        # first parameter.
         self.setWindowTitle('My Awesom App')
         
         label = QLabel('THIS IS AWESOM!!!')
@@ -33,6 +40,16 @@ class MainWindow(QMainWindow):
         
         # 设置 central widget 时 内容默认会占据整个窗口
         self.setCentralWidget(label)
+
+    # SLOT: This accepts a string, e.g. the window title, and prints it
+    # 槽函数接收一个字符串类型参数，例如窗口标题，然后打印出来
+    def onWindowTitleChane(self, s):
+        print(s)
+    
+    # SLOT: This has default parameters and can be called without a value
+    # 带有默认参数的槽函数 调用时可以不传参
+    def my_custom_fn(self, a='HELLO', b=5):
+        print(a, b)
 
 # You need one (and only one) QApplication instance per application.
 # Pass in sys.argv to allow command line arguments for your app.

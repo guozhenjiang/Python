@@ -1,7 +1,8 @@
-# https://www.learnpyqt.com/courses/start/creating-your-first-window/
+# https://www.learnpyqt.com/courses/start/signals-slots-events/
 
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QHBoxLayout, QWidget, QPushButton
+from PyQt5.QtCore import Qt, pyqtSignal
 
 # from PyQt5.QtGui import *
 # from PyQt5.QtWidgets import *
@@ -13,10 +14,32 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 # 创建 QMainWindow 的子类 MainWindow 来自定义自己应用程序的主窗口
 class MainWindow(QMainWindow):
     
+    my_awesome_signal = pyqtSignal(str)
+    
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         
+        # This sets the window title which will trigger all the above signals
+        # sending the new title to the attached functions or lambdas as the
+        # first parameter.
         self.setWindowTitle('My Awesom App')
+        
+        button = QPushButton('HELLO!')
+        button.pressed.connect(self.pushed_my_button)
+        
+        self.my_awesome_signal.connect(self.caught_my_0wn_signal)
+        
+        # 设置 central widget 时 内容默认会占据整个窗口
+        self.setCentralWidget(button)
+    
+    # SLOT: This has default parameters and can be called without a value
+    # 带有默认参数的槽函数 调用时可以不传参
+    def pushed_my_button(self):
+        print('Pressed it!')
+        self.my_awesome_signal.emit('WOAH')
+    
+    def caught_my_0wn_signal(self, s):
+        print(s)
 
 # You need one (and only one) QApplication instance per application.
 # Pass in sys.argv to allow command line arguments for your app.

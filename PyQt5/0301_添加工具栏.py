@@ -1,13 +1,8 @@
-# https://www.learnpyqt.com/courses/start/creating-your-first-window/
+# https://www.learnpyqt.com/courses/start/actions-toolbars-menus/
 
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow
-
-# from PyQt5.QtGui import *
-# from PyQt5.QtWidgets import *
-# from PyQt5.QtCore import *
-
-# import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QHBoxLayout, QWidget, QPushButton, QToolBar
+from PyQt5.QtCore import Qt, pyqtSignal
 
 # Subclass QMainWindow to customise your application's main window
 # 创建 QMainWindow 的子类 MainWindow 来自定义自己应用程序的主窗口
@@ -17,6 +12,24 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
         
         self.setWindowTitle('My Awesom App')
+        
+        label = QLabel('THIS IS AWESOM!!!')
+
+        # The `Qt` namespace has a lot of attributes to customise
+        # widgets. See: http://doc.qt.io/qt-5/qt.html
+        
+        # Qt 命名空间有很多参数可以自定义
+        # 关于 widgets 的可以参考: http://doc.qt.io/qt-5/qt.html
+        label.setAlignment(Qt.AlignCenter)
+        
+        # Set the central widget of the Window. Widget will expand
+        # to take up all the space in the window by default.
+        
+        # 设置 central widget 时 内容默认会占据整个窗口
+        self.setCentralWidget(label)
+        
+        toolbar = QToolBar()
+        self.addToolBar(toolbar)
 
 # You need one (and only one) QApplication instance per application.
 # Pass in sys.argv to allow command line arguments for your app.

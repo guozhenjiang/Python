@@ -1,14 +1,8 @@
-# https://www.learnpyqt.com/courses/start/creating-your-first-window/
+# https://www.learnpyqt.com/courses/start/actions-toolbars-menus/
 
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
-from PyQt5.QtCore import Qt
-
-# from PyQt5.QtGui import *
-# from PyQt5.QtWidgets import *
-# from PyQt5.QtCore import *
-
-# import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QHBoxLayout, QWidget, QPushButton, QToolBar, QAction, QStatusBar
+from PyQt5.QtCore import Qt, pyqtSignal
 
 # Subclass QMainWindow to customise your application's main window
 # 创建 QMainWindow 的子类 MainWindow 来自定义自己应用程序的主窗口
@@ -33,6 +27,20 @@ class MainWindow(QMainWindow):
         
         # 设置 central widget 时 内容默认会占据整个窗口
         self.setCentralWidget(label)
+        
+        toolbar = QToolBar('My main toolbar')
+        self.addToolBar(toolbar)
+        
+        button_action = QAction('Your button', self)
+        button_action.setStatusTip('This is your button')
+        button_action.triggered.connect(self.onMyToolBarButtonClick)
+        button_action.setCheckable(True)
+        toolbar.addAction(button_action)
+        
+        self.setStatusBar(QStatusBar(self))
+    
+    def onMyToolBarButtonClick(self, s):
+        print('click', s)
 
 # You need one (and only one) QApplication instance per application.
 # Pass in sys.argv to allow command line arguments for your app.
