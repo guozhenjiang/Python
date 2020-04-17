@@ -3,6 +3,7 @@
 import sys
 from PySide2 import QtCore, QtGui, QtOpenGL
 from OpenGL.GL import *
+from PySide2.QtWidgets import QApplication
 
 class GLDemo(QtOpenGL.QGLWidget):
     def __init__(self, parent=None):
@@ -13,13 +14,13 @@ class GLDemo(QtOpenGL.QGLWidget):
     def initializeGL(self):
         glClearColor()
     
-    def paintGL():
+    def paintGL(self):
         glClearColor()
         
-    def resizeGL():
+    def resizeGL(self):
         glClearColor()
 
-app = QtGui.QGuiApplication(sys.argv)
-ex = GLDemo
+app = QApplication()
+ex = GLDemo()
 ex.show()
 app.exec_()

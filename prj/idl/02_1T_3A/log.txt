@@ -1,6 +1,6 @@
 载入 ./ui_idl_main.ui
 初始化 UI
-模式切换到 debug_rx
+模式切换到 WangZeKun
 初始化 Signal Slot
 扫描端口
 端口 COM1

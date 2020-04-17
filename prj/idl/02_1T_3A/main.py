@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
 
 import struct
 
+import copy
+
 
 '''
     QComboBox
@@ -34,32 +36,32 @@ import struct
 '''
 
 class Anchor():
-    name = ''
     x = 0
     y = 0
     z = 0
     
-    def __init__(self, name=None, x=None, y=None, z=None):
-        self.name = name
-        self.x = x
-        self.y = y
-        self.z = z
+    def __init__(self):
+        pass
 
 class Tag():
-    name = ''
     x = 0
     y = 0
     z = 0
+    
+    stamp = ''
+    idx = 0
+    raw_data = b''
     
     d0 = 0
     d1 = 0
     d2 = 0
     
-    def __init__(self, name=None, x=None, y=None, z=None):
-        self.name = name
-        self.x = x
-        self.y = y
-        self.z = z
+    rssi_a0 = 0
+    rssi_a1 = 0
+    rssi_a2 = 0
+    
+    def __init__(self):
+        pass
 
 class IndoorLocation(QObject):
     anchor0 = Anchor()
@@ -67,40 +69,26 @@ class IndoorLocation(QObject):
     anchor2 = Anchor()
     tag = Tag()
     
+    tags = []   # 存储接收到的每个点
+    auto_drawing_idx = 0
+    drawing_auto = True
+    stamp_record_start = 0
+    
     # 实例化
     def __init__(self):
         self.name = 'IDL'
         
-        # Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0, 'r':0.0}
-        Anchor_t = {'name':'Anchor', 'color':'g', 'x':0.0, 'y':0.0, 'z':0.0}
-        Tag_t = {'name':'Tag', 'd0':0.0, 'd1':0.0, 'd2':0.0,'x':50, 'y':50, 'z':0.0}
+        self.anchor0.x = 0
+        self.anchor0.y = 0
+        self.anchor0.z = 0.0
         
-        self.Anchor0 = Anchor_t.copy()
-        self.Anchor1 = Anchor_t.copy()
-        self.Anchor2 = Anchor_t.copy()
+        self.anchor1.x = 300.0
+        self.anchor1.y = 0.0
+        self.anchor1.z = 0.0
         
-        self.Tag = Tag_t.copy()
-        
-        self.Anchor0['name'] = 'Anchor0'
-        self.Anchor0['color'] = 'r'
-        self.Anchor0['x'] = 0
-        self.Anchor0['y'] = 0
-        self.Anchor0['z'] = 0.0
-        # self.Anchor0['r'] = 50.0
-        
-        self.Anchor1['name'] = 'Anchor1'
-        self.Anchor1['color'] = 'g'
-        self.Anchor1['x'] = 300.0
-        self.Anchor1['y'] = 0.0
-        self.Anchor1['z'] = 0.0
-        # self.Anchor1['r'] = 100.0
-        
-        self.Anchor2['name'] = 'Anchor2'
-        self.Anchor2['color'] = 'b'
-        self.Anchor2['x'] = 0.0
-        self.Anchor2['y'] = 300.0
-        self.Anchor2['z'] = 0.0
-        # self.Anchor2['r'] = 80
+        self.anchor2.x = 0.0
+        self.anchor2.y = 300.0
+        self.anchor2.z = 0.0
         
         self.pkg_byte_id = 0
         self.uart_pkg = np.zeros(100, dtype=int, order='C')         # 新包缓存
@@ -148,6 +136,9 @@ class IndoorLocation(QObject):
     
     # Log 功能
     def log(self, log):
+        # time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        # 2020-04-17 14:21:40
+        
         # print(time.perf_counter(), ' --- ', time.process_time())
         self.log_stamp = time.perf_counter()    # time.clock()  time.process_time()
         log_stamp_det = self.log_stamp - self.log_stamp_last
@@ -183,12 +174,10 @@ class IndoorLocation(QObject):
         ui.dockWidget_Set.show()
         ui.dockWidget_Log.show()
         ui.dockWidget_Hex.show()
-        ui.dockWidget_Ascii.hide()
         
         ui.action_ViewSet.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
         ui.action_ViewLog.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
         ui.action_ViewHex.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Hex, ui.action_ViewHex.isChecked()))
-        ui.action_ViewAscii.changed.connect(lambda:self.slot_dock_show_hide(ui.dockWidget_Ascii, ui.action_ViewAscii.isChecked()))
         
         ui.comboBox_name_raw.deleteLater()  # 删掉 UI 生成的端口选择下拉框控件
         ui.comboBox_name = PortComboBox()   # 用自己重写的下拉框控件替换被删的
@@ -203,7 +192,7 @@ class IndoorLocation(QObject):
         self.axes_2d_static = self.canvas_2d_matplotlib.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
         self.axes_2d_static.grid(True)
         
-        # str_item = str(self.Anchor0['x'])
+        # str_item = str(self.anchor0.x)
         # newItem = QTabWidgetItem(str_item)
         # self.ui_main.tableWidget_DataInfo.setItem(0, 0, newItem)
         # print(str_item)
@@ -218,6 +207,9 @@ class IndoorLocation(QObject):
         
         # self.timer_2d_matplotlib = self.canvas_2d_matplotlib.new_timer(100, [(self.update_display, (), {})])
         # self.timer_2d_matplotlib.start()
+        
+        self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
+        self.ui_main.horizontalSlider_Graphic.setSingleStep(1)
         
         # 将 Matlabplotlib 3D 图像嵌入界面
         layout = self.ui_main.horizontalLayout_3D_Matplotlib    # <class 'PySide2.QtWidgets.QHBoxLayout'>
@@ -235,19 +227,24 @@ class IndoorLocation(QObject):
         ui = self.ui_main
         
         ui.comboBox_name.signal_PortComboBox_showPopup.connect(self.slot_PortComboBox_showPopup)
-        ui.comboBox_name.currentTextChanged.connect(    lambda:self.slot_port_name())
-        ui.comboBox_baud.currentTextChanged.connect(    lambda:self.slot_port_baud())
-        ui.comboBox_byte.currentTextChanged.connect(    lambda:self.slot_port_byte())
-        ui.comboBox_parity.currentTextChanged.connect(  lambda:self.slot_port_parity())
-        ui.comboBox_stop.currentTextChanged.connect(    lambda:self.slot_port_stop())
-        ui.checkBox_xonxoff.stateChanged.connect(       lambda:self.slot_port_xonxoff())
-        ui.checkBox_rtscts.stateChanged.connect(        lambda:self.slot_port_rtscts())
-        ui.checkBox_dsrdtr.stateChanged.connect(        lambda:self.slot_port_dsrdtr())
-        ui.pushButton_open_close.clicked.connect(       lambda:self.slot_port_open_close())
-        ui.pushButton_CleanReceive.clicked.connect(     lambda:self.slot_clean_receive())
-        ui.pushButton_StartSend.clicked.connect(        lambda:self.slot_send())
-        ui.tableWidget_DataInfo.itemChanged.connect(    lambda:self.slot_tableWidget_Anchor_changed())
-        ui.comboBox_Mode.currentTextChanged.connect(    lambda:self.slot_mode_changed())
+        ui.comboBox_name.currentTextChanged.connect(            lambda:self.slot_port_name())
+        ui.comboBox_baud.currentTextChanged.connect(            lambda:self.slot_port_baud())
+        ui.comboBox_byte.currentTextChanged.connect(            lambda:self.slot_port_byte())
+        ui.comboBox_parity.currentTextChanged.connect(          lambda:self.slot_port_parity())
+        ui.comboBox_stop.currentTextChanged.connect(            lambda:self.slot_port_stop())
+        ui.checkBox_xonxoff.stateChanged.connect(               lambda:self.slot_port_xonxoff())
+        ui.checkBox_rtscts.stateChanged.connect(                lambda:self.slot_port_rtscts())
+        ui.checkBox_dsrdtr.stateChanged.connect(                lambda:self.slot_port_dsrdtr())
+        ui.pushButton_open_close.clicked.connect(               lambda:self.slot_port_open_close())
+        ui.pushButton_CleanReceive.clicked.connect(             lambda:self.slot_clean_receive())
+        ui.pushButton_StartSend.clicked.connect(                lambda:self.slot_send())
+        ui.tableWidget_DataInfo.itemChanged.connect(            lambda:self.slot_tableWidget_Anchor_changed())
+        ui.comboBox_Mode.currentTextChanged.connect(            lambda:self.slot_mode_changed())
+        ui.pushButton_StartRecord.clicked.connect(              lambda:self.slot_start_record())
+        ui.horizontalSlider_Graphic.sliderPressed.connect(      lambda:self.slot_graphic_slider_pressed())
+        ui.horizontalSlider_Graphic.sliderReleased.connect(     lambda:self.slot_graphic_slider_released())
+        ui.horizontalSlider_Graphic.valueChanged.connect(       lambda:self.slot_graphic_slider_changed())
+        
     
     def update_display(self):
         if(self.port.isopen):
@@ -284,8 +281,6 @@ class IndoorLocation(QObject):
         pass
     
     def draw_tag_point(self):
-        # self.circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.2, picker=5)
-        # circle = plt.Circle((self.Tag['x'], self.Tag['y']), 3, color='c', ec='c', alpha=0.8, picker=5)
         circle = plt.Circle((self.tag.x, self.tag.y), 3, color='c', ec='c', alpha=0.8, picker=5)
         self.axes_2d_static.add_artist(circle)
     
@@ -293,14 +288,21 @@ class IndoorLocation(QObject):
         circle = plt.Circle((x, y), r, color=c, ec='c', alpha=0.2, picker=5)
         self.axes_2d_static.add_artist(circle)
     
-    def draw_anchor_circles(self):
-        # self.draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.Tag['d0'], 'r')
-        # self.draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.Tag['d1'], 'g')
-        # self.draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.Tag['d2'], 'b')
-        self.draw_circle(self.Anchor0['x'], self.Anchor0['y'], self.tag.d0, 'r')
-        self.draw_circle(self.Anchor1['x'], self.Anchor1['y'], self.tag.d1, 'g')
-        self.draw_circle(self.Anchor2['x'], self.Anchor2['y'], self.tag.d2, 'b')
+    def draw_distance_circles(self):
+        self.draw_circle(self.anchor0.x, self.anchor0.y, self.tag.d0, 'r')
+        self.draw_circle(self.anchor1.x, self.anchor1.y, self.tag.d1, 'g')
+        self.draw_circle(self.anchor2.x, self.anchor2.y, self.tag.d2, 'b')
+    
+    def draw_rssi_circles(self):
+        # self.draw_circle(self.anchor0.x, self.anchor0.y, self.tag.rssi_a0, 'gray')
+        # self.draw_circle(self.anchor1.x, self.anchor1.y, self.tag.rssi_a1, 'gray')
+        # self.draw_circle(self.anchor2.x, self.anchor2.y, self.tag.rssi_a2, 'gray')
         
+        self.draw_circle(self.anchor0.x, self.anchor0.y, 100, 'gray')
+        self.draw_circle(self.anchor1.x, self.anchor1.y, 100, 'gray')
+        self.draw_circle(self.anchor2.x, self.anchor2.y, 100, 'gray')
+        pass
+    
     def draw_anchor_to_anchor_line(self, anchor_0, anchor_1):
         x0 = anchor_0['x']
         y0 = anchor_0['y']
@@ -320,9 +322,12 @@ class IndoorLocation(QObject):
         pass
     
     def draw_anchor_points(self):
-        self.draw_anchor_point(self.Anchor0, 'r')
-        self.draw_anchor_point(self.Anchor1, 'g')
-        self.draw_anchor_point(self.Anchor2, 'b')
+        circle = plt.Circle((self.anchor0.x, self.anchor0.y), radius=5, color='r', ec='c', alpha=1, picker=5)
+        self.axes_2d_static.add_artist(circle)
+        circle = plt.Circle((self.anchor1.x, self.anchor1.y), radius=5, color='g', ec='c', alpha=1, picker=5)
+        self.axes_2d_static.add_artist(circle)
+        circle = plt.Circle((self.anchor2.x, self.anchor2.y), radius=5, color='b', ec='c', alpha=1, picker=5)
+        self.axes_2d_static.add_artist(circle)
     
     def draw_Tag_to_3_Anchor_(self, d1, d2, d3):
         pass
@@ -340,7 +345,7 @@ class IndoorLocation(QObject):
         if('debug_rx' == self.ui_main.comboBox_Mode.currentText()):
             self.clear_display_2d_matplotlib()
             self.draw_anchor_points()
-            self.draw_anchor_circles()
+            self.draw_distance_circles()
             self.axes_2d_static.figure.canvas.draw()
             pass
         
@@ -357,6 +362,29 @@ class IndoorLocation(QObject):
             pass
         else:
             pass
+    
+    def slot_start_record(self):
+        self.tags.clear()
+        self.auto_drawing_idx = 0
+        self.stamp_record_start = time.perf_counter()
+        self.ui_main.horizontalSlider_Graphic.setValue(0)
+        self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
+        self.ui_main.plainTextEdit_Hex.clear()
+    
+    def slot_graphic_slider_pressed(self):
+        self.drawing_auto = False
+    
+    def slot_graphic_slider_released(self):
+        self.drawing_auto = True
+        self.auto_drawing_idx = self.ui_main.horizontalSlider_Graphic.value()
+    
+    def slot_graphic_slider_changed(self):
+        idx = self.ui_main.horizontalSlider_Graphic.value()
+        if not self.drawing_auto:
+            if idx < len(self.tags):
+                self.clear_display_2d_matplotlib()
+                self.draw_a_pkg(idx)
+                self.axes_2d_static.figure.canvas.draw()
     
     def slot_PortComboBox_showPopup(self):
         self.log('扫描端口')
@@ -443,7 +471,6 @@ class IndoorLocation(QObject):
     
     def slot_clean_receive(self):
         self.ui_main.plainTextEdit_Hex.clear()
-        self.ui_main.plainTextEdit_Ascii.clear()
         
         self.slot_mode_changed()
         
@@ -473,30 +500,30 @@ class IndoorLocation(QObject):
         pass
     
     def update_2d_matplotlib_limit(self):
-        x_min = self.Anchor0['x']
-        x_max = self.Anchor0['x']
-        y_min = self.Anchor0['y']
-        y_max = self.Anchor0['y']
+        x_min = self.anchor0.x
+        x_max = self.anchor0.x
+        y_min = self.anchor0.y
+        y_max = self.anchor0.y
         
-        if(self.Anchor1['x'] < x_min):
-            x_min = self.Anchor1['x']
-        if(self.Anchor2['x'] < x_min):
-            x_min = self.Anchor2['x']
+        if(self.anchor1.x < x_min):
+            x_min = self.anchor1.x
+        if(self.anchor2.x < x_min):
+            x_min = self.anchor2.x
         
-        if(self.Anchor1['x'] > x_max):
-            x_max = self.Anchor1['x']
-        if(self.Anchor2['x'] > x_max):
-            x_max = self.Anchor2['x']
+        if(self.anchor1.x > x_max):
+            x_max = self.anchor1.x
+        if(self.anchor2.x > x_max):
+            x_max = self.anchor2.x
         
-        if(self.Anchor1['y'] < y_min):
-            y_min = self.Anchor1['y']
-        if(self.Anchor2['y'] < y_min):
-            y_min = self.Anchor2['y']
+        if(self.anchor1.y < y_min):
+            y_min = self.anchor1.y
+        if(self.anchor2.y < y_min):
+            y_min = self.anchor2.y
         
-        if(self.Anchor1['y'] > y_max):
-            y_max = self.Anchor1['y']
-        if(self.Anchor2['y'] > y_max):
-            y_max = self.Anchor2['y']
+        if(self.anchor1.y > y_max):
+            y_max = self.anchor1.y
+        if(self.anchor2.y > y_max):
+            y_max = self.anchor2.y
         
         self.keep_out = 200
         
@@ -513,17 +540,17 @@ class IndoorLocation(QObject):
         # a0_x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
         # print(a0_x)
         
-        self.Anchor0['x'] = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
-        self.Anchor0['y'] = float(self.ui_main.tableWidget_DataInfo.item(0, 1).text())
-        self.Anchor0['z'] = float(self.ui_main.tableWidget_DataInfo.item(0, 2).text())
+        self.anchor0.x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
+        self.anchor0.y = float(self.ui_main.tableWidget_DataInfo.item(0, 1).text())
+        self.anchor0.z = float(self.ui_main.tableWidget_DataInfo.item(0, 2).text())
         
-        self.Anchor1['x'] = float(self.ui_main.tableWidget_DataInfo.item(1, 0).text())
-        self.Anchor1['y'] = float(self.ui_main.tableWidget_DataInfo.item(1, 1).text())
-        self.Anchor1['z'] = float(self.ui_main.tableWidget_DataInfo.item(1, 2).text())
+        self.anchor1.x = float(self.ui_main.tableWidget_DataInfo.item(1, 0).text())
+        self.anchor1.y = float(self.ui_main.tableWidget_DataInfo.item(1, 1).text())
+        self.anchor1.z = float(self.ui_main.tableWidget_DataInfo.item(1, 2).text())
         
-        self.Anchor2['x'] = float(self.ui_main.tableWidget_DataInfo.item(2, 0).text())
-        self.Anchor2['y'] = float(self.ui_main.tableWidget_DataInfo.item(2, 1).text())
-        self.Anchor2['z'] = float(self.ui_main.tableWidget_DataInfo.item(2, 2).text())
+        self.anchor2.x = float(self.ui_main.tableWidget_DataInfo.item(2, 0).text())
+        self.anchor2.y = float(self.ui_main.tableWidget_DataInfo.item(2, 1).text())
+        self.anchor2.z = float(self.ui_main.tableWidget_DataInfo.item(2, 2).text())
         
         self.update_2d_matplotlib_limit()
         
@@ -535,17 +562,13 @@ class IndoorLocation(QObject):
         dock_set.setVisible(is_checked)
     
     def receive_port_data(self):
-        if('debug_rx' == self.ui_main.comboBox_Mode.currentText()):
-            self.receive_port_data_debug()
+        if('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
+            self.receive_port_data_WangZeKun()
             pass
-        elif(self.port.isopen):
-            if('DongHan' == self.ui_main.comboBox_Mode.currentText()):
+        
+        elif('DongHan' == self.ui_main.comboBox_Mode.currentText()):
+            if(self.port.isopen):
                 self.receive_port_data_DongHan()
-                pass
-            elif('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
-                self.receive_port_data_WangZeKun()
-                pass
-        pass
     
     def receive_port_data_DongHan(self):
         port = self.port
@@ -555,7 +578,7 @@ class IndoorLocation(QObject):
             try:
                 if(port.port.in_waiting > 0):           # inWaiting()
                     new_bytes = port.port.read()
-                    new_str = new_bytes.hex()
+                    str_new_pkg = new_bytes.hex()
                     new_bytes_0 = new_bytes[0]
                     # print(type(new_bytes_0), new_bytes_0)
                     
@@ -594,86 +617,16 @@ class IndoorLocation(QObject):
                     
                     # print()
                     # print(type(new_bytes), new_bytes)
-                    # print(type(new_str), new_str)
+                    # print(type(str_new_pkg), str_new_pkg)
                     
-                    # data_text.appendPlainText(new_str)                # 追加方式会导致每项换行
+                    # data_text.appendPlainText(str_new_pkg)                # 追加方式会导致每项换行
                     
                     data_text.moveCursor(QTextCursor.End)               # 手动在末尾插入
-                    data_text.insertPlainText(new_str.upper() + ' ')
+                    data_text.insertPlainText(str_new_pkg.upper() + ' ')
             except:
                 pass
     
     def receive_port_data_WangZeKun(self):
-        port = self.port
-        data_text = self.ui_main.plainTextEdit_Hex
-        
-        if(self.port.isopen):
-            try:
-                if(port.port.in_waiting > 0):
-                    new_bytes = port.port.read()
-                    # self.log('%02d : %s' %(self.pkg_byte_id, new_bytes))
-                    new_str = new_bytes.hex()
-                    new_bytes_0 = new_bytes[0]
-                    # print(type(new_bytes_0), new_bytes_0)
-                    
-                    self.uart_pkg[self.pkg_byte_id] = new_bytes_0
-                    
-                    if(     ( 0 == self.pkg_byte_id) and (0xFF != self.uart_pkg[self.pkg_byte_id])
-                        or  ( 1 == self.pkg_byte_id) and (0x02 != self.uart_pkg[self.pkg_byte_id])
-                        or  ( 2 == self.pkg_byte_id) and (0x00 != self.uart_pkg[self.pkg_byte_id])
-                        or  ( 3 == self.pkg_byte_id) and (0x04 != self.uart_pkg[self.pkg_byte_id]) ):
-                        self.pkg_byte_id = 0
-                    else:
-                        self.pkg_byte_id += 1
-                        if(self.pkg_byte_id >= 32):
-                            X_H = self.uart_pkg[9]
-                            X_L = self.uart_pkg[10]
-                            Tag_x = (X_H << 8) | X_L
-                            self.Tag['x'] = Tag_x
-                            
-                            Y_H = self.uart_pkg[11]
-                            Y_L = self.uart_pkg[12]
-                            Tag_y = (Y_H << 8) | Y_L
-                            self.Tag['y'] = Tag_y
-                            
-                            R0_H = self.uart_pkg[13]
-                            R0_L = self.uart_pkg[14]
-                            d0 = (R0_H << 8) | R0_L
-                            self.Tag['d0'] = d0
-                            
-                            R1_H = self.uart_pkg[15]
-                            R1_L = self.uart_pkg[16]
-                            d1 = (R1_H << 8) | R1_L
-                            self.Tag['d1'] = d1
-                            
-                            R2_H = self.uart_pkg[17]
-                            R2_L = self.uart_pkg[18]
-                            d2 = (R2_H << 8) | R2_L
-                            self.Tag['d2'] = d2
-                            
-                            # print('X:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] Y:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] D0:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] D1:[0x%02X 0x%02X -> 0x%04X(%+ 6d)] D2:[0x%02X 0x%02X -> 0x%04X(%+ 6d)]'\
-                            #         %(  X_H, X_L, Tag_x, Tag_x,\
-                                        # Y_H, Y_L, Tag_y, Tag_y,\
-                                        # R0_H, R0_L, d0, d0,\
-                                        # R1_H, R1_L, d1, d1,\
-                                        # R2_H, R2_L, d2, d2)   )
-                            
-                            # print('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, d0, d1, d2))
-                            self.log('%s' %('(%+ 6d, %+ 6d)  [D0:%+ 6d]  [D1:%+ 6d]  [D2:%+ 6d]' %(Tag_x, Tag_y, d0, d1, d2)))
-                            
-                            self.pkg_byte_id = 0
-                            
-                    # print(type(new_bytes), new_bytes)
-                    # print(type(new_str), new_str)
-                    
-                    # data_text.appendPlainText(new_str)                # 追加方式会导致每项换行
-                    
-                    data_text.moveCursor(QTextCursor.End)               # 手动在末尾插入
-                    data_text.insertPlainText(new_str.upper() + ' ')
-            except:
-                pass
-    
-    def receive_port_data_debug(self):
         port = self.port
         data_text = self.ui_main.plainTextEdit_Hex
         
@@ -682,11 +635,11 @@ class IndoorLocation(QObject):
         self.enter_qtimer_stamp_last = self.enter_qtimer_stamp
         rx_cache_len = len(port.rx_cache)
         
-        print(  '\r\n % 12.6fs after:%10.3fms rx:%03dB ' %(\
-                self.enter_qtimer_stamp,
-                (self.enter_qtimer_gap * 1000),
-                rx_cache_len),
-                end='' )
+        # print(  '\r\n % 12.6fs after:%10.3fms rx:%03dB ' %(\
+        #         self.enter_qtimer_stamp,
+        #         (self.enter_qtimer_gap * 1000),
+        #         rx_cache_len),
+        #         end='' )
         
         if port.isopen and rx_cache_len<32:
             try:
@@ -703,11 +656,11 @@ class IndoorLocation(QObject):
                     self.read_serial_gap = self.read_serial_stamp - self.read_serial_stamp_last
                     self.read_serial_stamp_last = self.read_serial_stamp
                     
-                    print(  'after[%10.3f]ms read[%03d]B rx:%03dB ' %(\
-                            (self.read_serial_gap * 1000),
-                            num,
-                            rx_cache_len),
-                            end='' )
+                    # print(  'after[%10.3f]ms read[%03d]B rx:%03dB ' %(\
+                    #         (self.read_serial_gap * 1000),
+                    #         num,
+                    #         rx_cache_len),
+                    #         end='' )
                     
                     while (len(port.rx_cache) >= 32):                 # 至少收到了一个包
                         if((0xFF == port.rx_cache[0]) and (0x02 == port.rx_cache[1])):
@@ -715,59 +668,53 @@ class IndoorLocation(QObject):
                             new_pkg = port.rx_cache[0:32]
                             port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
                             
-                            new_str = new_pkg.hex().upper()
-                            data_text.appendPlainText(new_str)
+                            self.tag.stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                            self.tag.stamp += ' %12.6f' %(time.perf_counter() - self.stamp_record_start)
+                            self.tag.raw_data = new_pkg
+                            self.tag.x = int(np.int16((new_pkg[9]  << 8) | new_pkg[10]))
+                            self.tag.y = int(np.int16((new_pkg[11] << 8) | new_pkg[12]))
+                            self.tag.d0 = (new_pkg[13] << 8) | new_pkg[14]
+                            self.tag.d1 = (new_pkg[15] << 8) | new_pkg[16]
+                            self.tag.d2 = (new_pkg[17] << 8) | new_pkg[18]
+                            self.tag.rssi_a0 = int(np.int16((new_pkg[19] << 8) | new_pkg[20]))
+                            self.tag.rssi_a1 = int(np.int16((new_pkg[21] << 8) | new_pkg[22]))
+                            self.tag.rssi_a2 = int(np.int16((new_pkg[23] << 8) | new_pkg[24]))
+                            
+                            # !!! 这里必须使用 copy 否则缓存的数据总是最后一个包 !!!
+                            # ref: https://www.iteye.com/blog/greybeard-1442259
+                            # self.tags.append(copy.copy(self.tag))
+                            self.tags.append(copy.deepcopy(self.tag))
+                            
+                            if self.drawing_auto:
+                                self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.tags))
+                            
+                            str_pkg_info = ''
+                            str_pkg_info += ' P(%+3d, %+3d)' %(self.tag.x, self.tag.y)
+                            str_pkg_info += ' D(%3d, %3d, %3d)' %(self.tag.d0, self.tag.d1, self.tag.d2)
+                            str_pkg_info += ' R(%+3d, %+3d, %+3d)' %(self.tag.rssi_a0, self.tag.rssi_a1, self.tag.rssi_a2)
+                            
+                            str_new_pkg_hex = ''
+                            
+                            for b in new_pkg:
+                                str_new_pkg_hex += ' %02X' %(b)
+                            
+                            str_new_pkg = self.tag.stamp
+                            str_new_pkg += str_pkg_info
+                            str_new_pkg += str_new_pkg_hex
+                            
+                            data_text.appendPlainText(str_new_pkg)
                             
                             # self.log(   '[% 8.3fs][id:% 8d][+% 4dB = % 4dB] => (% 4d, % 4d) [% 4d, % 4d, % 4d] [% 4dB]'\
                             #             %(  gap,
                             #                 port.read_id,
                             #                 num,
                             #                 len(port.rx_cache),
-                            #                 self.Tag['x'],
-                            #                 self.Tag['y'],
+                            #                 self.tag.x,
+                            #                 self.tag.y,
                             #                 self.Tag['d0'],
                             #                 self.Tag['d1'],
                             #                 self.Tag['d2'],
                             #                 len(port.rx_cache)  )   )
-                            
-                            # gap = 0;
-                            # num = 0;
-                            
-                            X_H = new_pkg[9]
-                            X_L = new_pkg[10]
-                            x = int(np.int16((X_H << 8) | X_L))
-                            self.Tag['x'] = x
-                            self.tag.x = x
-                            
-                            Y_H = new_pkg[11]
-                            Y_L = new_pkg[12]
-                            y = int(np.int16((Y_H << 8) | Y_L))
-                            self.Tag['y'] = y
-                            self.tag.y = y
-                            
-                            R0_H = new_pkg[13]
-                            R0_L = new_pkg[14]
-                            d0 = (R0_H << 8) | R0_L
-                            self.Tag['d0'] = d0
-                            self.tag.d0 = d0
-                            
-                            R1_H = new_pkg[15]
-                            R1_L = new_pkg[16]
-                            d1 = (R1_H << 8) | R1_L
-                            self.Tag['d1'] = d1
-                            self.tag.d1 = d1
-                            
-                            R2_H = new_pkg[17]
-                            R2_L = new_pkg[18]
-                            d2 = (R2_H << 8) | R2_L
-                            self.Tag['d2'] = d2
-                            self.tag.d2 = d2
-                            
-                            # # 绘制新的点
-                            # self.clear_display_2d_matplotlib()
-                            # self.draw_tag_point()
-                            # self.draw_anchor_circles()
-                            # self.axes_2d_static.figure.canvas.draw()
                         else:
                             self.log('%s' %(port.rx_cache))
                             print('finding_header...')
@@ -776,12 +723,73 @@ class IndoorLocation(QObject):
                 print('发生异常:')
                 print(e)
     
+    def draw_a_pkg(self, idx):
+        # 显示解析后的包信息
+        str_pkg_info = ''
+        
+        if idx < len(self.tags):
+            tag_pkg = self.tags[idx]
+            
+            str_pkg_info += tag_pkg.stamp
+            str_pkg_info += ' P(%+3d, %+3d)' %(tag_pkg.x, tag_pkg.y)
+            str_pkg_info += ' D(%3d, %3d, %3d)' %(tag_pkg.d0, tag_pkg.d1, tag_pkg.d2)
+            str_pkg_info += ' R(%+3d, %+3d, %+3d)' %(tag_pkg.rssi_a0, tag_pkg.rssi_a1, tag_pkg.rssi_a2)
+            # print('设置包信息', str_pkg_info, time.time())
+            self.ui_main.lineEdit_PkgInfo.setText(str_pkg_info)
+            
+            # # 开始图形化
+            # self.clear_display_2d_matplotlib()
+            
+            # draw tag_pkg point
+            circle = plt.Circle((tag_pkg.x, tag_pkg.y), 3, color='c', ec='c', alpha=0.8, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            
+            # draw anchor points
+            circle = plt.Circle((self.anchor0.x, self.anchor0.y), radius=5, color='r', ec='c', alpha=1, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            circle = plt.Circle((self.anchor1.x, self.anchor1.y), radius=5, color='g', ec='c', alpha=1, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            circle = plt.Circle((self.anchor2.x, self.anchor2.y), radius=5, color='b', ec='c', alpha=1, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            
+            # draw distance circles
+            circle = plt.Circle((self.anchor0.x, self.anchor0.y), tag_pkg.d0, color='r', ec='c', alpha=0.2, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            circle = plt.Circle((self.anchor1.x, self.anchor1.y), tag_pkg.d1, color='g', ec='c', alpha=0.2, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            circle = plt.Circle((self.anchor2.x, self.anchor2.y), tag_pkg.d2, color='b', ec='c', alpha=0.2, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            
+            # # draw rssi circle
+            # circle = plt.Circle((self.anchor0.x, self.anchor0.y), tag_pkg.d0, color='gray', ec='c', alpha=0.2, picker=5)
+            # self.axes_2d_static.add_artist(circle)
+            # circle = plt.Circle((self.anchor1.x, self.anchor1.y), tag_pkg.d1, color='gray', ec='c', alpha=0.2, picker=5)
+            # self.axes_2d_static.add_artist(circle)
+            # circle = plt.Circle((self.anchor2.x, self.anchor2.y), tag_pkg.d2, color='gray', ec='c', alpha=0.2, picker=5)
+            # self.axes_2d_static.add_artist(circle)
+            
+            circle = plt.Circle((self.anchor0.x, self.anchor0.y), 100, color='gray', ec='c', alpha=0.2, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            circle = plt.Circle((self.anchor1.x, self.anchor1.y), 100, color='gray', ec='c', alpha=0.2, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            circle = plt.Circle((self.anchor2.x, self.anchor2.y), 100, color='gray', ec='c', alpha=0.2, picker=5)
+            self.axes_2d_static.add_artist(circle)
+            
+            # self.axes_2d_static.figure.canvas.draw()
+        
+    
     def update_graphic(self):
-        self.clear_display_2d_matplotlib()
-        self.draw_tag_point()
-        self.draw_anchor_points()
-        self.draw_anchor_circles()
-        self.axes_2d_static.figure.canvas.draw()
+        if self.auto_drawing_idx < len(self.tags):
+            # 取出数据包
+            if self.drawing_auto and self.port.isopen:
+                
+                # 开始图形化
+                self.clear_display_2d_matplotlib()
+                self.draw_a_pkg(self.auto_drawing_idx)
+                self.axes_2d_static.figure.canvas.draw()
+                self.ui_main.horizontalSlider_Graphic.setValue(self.auto_drawing_idx)
+                
+                self.auto_drawing_idx += 1
 
 if __name__ == '__main__':
     app = QApplication([])

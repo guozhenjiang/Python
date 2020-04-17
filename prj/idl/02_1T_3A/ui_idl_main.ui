@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>845</width>
-    <height>712</height>
+    <height>589</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,6 +21,18 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_5">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_7">
       <item>
@@ -43,17 +55,12 @@
         </property>
         <item>
          <property name="text">
-          <string>debug_rx</string>
+          <string>WangZeKun</string>
          </property>
         </item>
         <item>
          <property name="text">
           <string>DongHan</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>WangZeKun</string>
          </property>
         </item>
        </widget>
@@ -101,9 +108,26 @@
        <attribute name="title">
         <string>2D_Matplotlib</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_2D">
+       <layout class="QVBoxLayout" name="verticalLayout_9">
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2D_"/>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_PkgInfo">
+          <property name="placeholderText">
+           <string>RAW Package</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSlider" name="horizontalSlider_Graphic">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="tickPosition">
+           <enum>QSlider::TicksAbove</enum>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -156,6 +180,19 @@
         </property>
         <property name="text">
          <string>开始上报</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_StartRecord">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>开始记录</string>
         </property>
        </widget>
       </item>
@@ -276,21 +313,6 @@ color: rgb(0, 255, 127);</string>
                <property name="text">
                 <string>端口</string>
                </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QComboBox" name="comboBox_name_raw">
-               <property name="styleSheet">
-                <string notr="true">background-color: rgb(255, 0, 0);</string>
-               </property>
-               <property name="currentText">
-                <string>选择端口</string>
-               </property>
-               <item>
-                <property name="text">
-                 <string>选择端口</string>
-                </property>
-               </item>
               </widget>
              </item>
              <item row="1" column="0">
@@ -531,6 +553,21 @@ color: rgb(0, 255, 127);</string>
                </item>
               </widget>
              </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="comboBox_name_raw">
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 0, 0);</string>
+               </property>
+               <property name="currentText">
+                <string>选择端口</string>
+               </property>
+               <item>
+                <property name="text">
+                 <string>选择端口</string>
+                </property>
+               </item>
+              </widget>
+             </item>
             </layout>
            </item>
            <item>
@@ -685,43 +722,8 @@ color: rgb(0, 255, 127);</string>
     <addaction name="action_ViewSet"/>
     <addaction name="action_ViewLog"/>
     <addaction name="action_ViewHex"/>
-    <addaction name="action_ViewAscii"/>
    </widget>
    <addaction name="menu_View"/>
-  </widget>
-  <widget class="QDockWidget" name="dockWidget_Ascii">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="autoFillBackground">
-    <bool>false</bool>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">background-color: rgb(240, 240, 240);</string>
-   </property>
-   <property name="features">
-    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
-   </property>
-   <property name="windowTitle">
-    <string>ASCII</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="widget_DockAscii">
-    <layout class="QVBoxLayout" name="verticalLayout_7">
-     <item>
-      <widget class="QPlainTextEdit" name="plainTextEdit_Ascii">
-       <property name="verticalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOn</enum>
-       </property>
-       <property name="placeholderText">
-        <string>ASCII</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_DataInfo">
    <property name="windowTitle">
@@ -885,19 +887,6 @@ color: rgb(0, 255, 127);</string>
         </property>
        </item>
       </widget>
-     </item>
-     <item>
-      <spacer name="verticalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>5</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </widget>
