@@ -58,54 +58,51 @@ class Tag():
         self.z = 0
 
 class Pkg_WZK():
-    str_stamp = ''  # 接收到数据包的时间戳
-    raw = bytes()   # 接收到的数据包原始内容
-    anchor_num = 3  # 包中基站个数
-    tag_num = 1     # 包中标签个数
-    tags = []       # 当前包中的标签信息
-    
-    str_raw = ''
-    str_point = ''
-    str_distance = ''
-    str_rssi = ''
-    
-    str_pkg = ''
-    
     def __init__(self):
         super().__init__()
-        self.tags.clear()
+        self.raw = bytes()      # 接收到的数据包原始内容
+        self.anchor_num = 3     # 包中基站个数
+        self.tag_num = 1        # 包中标签个数
+        self.tags = []          # 当前包中的标签信息
+        self.str_record = ''    # 记录到文件的字符串
     
     def update(self, raw_bytes):
-        self.stamp = self.time_stamp_ms()
-        self.raw = raw_bytes
-        self.update_val(copy.copy(self.raw))
-        self.update_str()
-    
-    def update_val(self, pkg):
+        # 从包数据解析信息值
         for i in range(self.tag_num):
-            tag = Tag()
-            tag.id = i
-            tag.x = int(np.int16((pkg[9 + 4*i + 0]  << 8) | pkg[9 + 4*i + 1]))
-            tag.y = int(np.int16((pkg[9 + 4*i + 2]  << 8) | pkg[9 + 4*i + 3]))
-            self.tags.append(tag)
+            self.tags.append(Tag())
+            self.tags[i].x = int(np.int16((raw_bytes[9 + 4*i + 0]  << 8) | raw_bytes[9 + 4*i + 1]))
+            self.tags[i].y = int(np.int16((raw_bytes[9 + 4*i + 2]  << 8) | raw_bytes[9 + 4*i + 3]))
             
             for j in range(self.anchor_num):
-                tag[i].d[j] = (pkg[13 + 2*j + 0] << 8) | pkg[13 + 2*j + 1]
-                tag[i].r[j] = (pkg[19 + 2*j + 0] << 8) | pkg[19 + 2*j + 1]
-                tag[i].r[j] = int(np.int16((pkg[19 + 2*j + 0] << 8) | pkg[19 + 2*j + 1])) / -100
+                self.tags[i].d.append((raw_bytes[13 + 2*j + 0] << 8) | raw_bytes[13 + 2*j + 1])
+                self.tags[i].r.append(int(np.int16((raw_bytes[19 + 2*j + 0] << 8) | raw_bytes[19 + 2*j + 1])) / 100)
 
-    def update_str(self):
-        self.str_raw = ''
-        for b in self.raw:
-            self.str_raw += ' %02X' %(b)
-        self.str_point      = ' P(%+3d, %+3d)' %(self.x, self.y)
-        self.str_distance   = ' D(%3d, %3d, %3d)' %(self.d0, self.d1, self.d2)
-        self.str_rssi       = ' R(%+3d, %+3d, %+3d)' %(self.rssi_a0, self.rssi_a1, self.rssi_a2)
-        self.str_pkg = (    self.str_stamp + 
-                            self.str_point + 
-                            self.str_distance + 
-                            self.str_rssi + 
-                            self.str_raw    )
+        # 记录时间戳
+        self.str_record = self.time_stamp_ms()
+        
+        for i in range(self.tag_num):
+            # 坐标点
+            self.str_record += ' P(%+4d, %+4d)' %(self.tags[i].x, self.tags[i].y)
+            
+            # 距离
+            self.str_record += ' D('
+            for j in range(self.anchor_num):
+                self.str_record += '%3d' %(self.tags[i].d[j])
+                if j != self.anchor_num-1:
+                    self.str_record += ', '
+            self.str_record += ')'
+            
+            # 信号强度
+            self.str_record += ' R('
+            for j in range(self.anchor_num):
+                self.str_record += '%3d' %(self.tags[i].r[j])
+                if j != self.anchor_num-1:
+                    self.str_record += ', '
+            self.str_record += ')'
+            
+        # 原始包
+        for b in  raw_bytes:
+            self.str_record += ' %02X' %(b)
 
     def time_stamp(self):
         return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -127,9 +124,6 @@ class IndoorLocation(QObject):
     
     for anchor in anchors:
         anchor.show()
-    
-    tag = Tag()
-    tags = []   # 存储接收到的每个点
     
     new_pkg = Pkg_WZK()
     pkgs = []
@@ -398,7 +392,7 @@ class IndoorLocation(QObject):
             pass
     
     def slot_start_record(self):
-        self.tags.clear()
+        # self.tags.clear()
         self.drawing_idx = 0
         self.stamp_record_start = time.perf_counter()
         self.ui_main.horizontalSlider_Graphic.setValue(0)
@@ -526,10 +520,6 @@ class IndoorLocation(QObject):
         else:
             self.ui_main.pushButton_PortOpenClose.setText('打开端口')
             self.log('端口关闭')
-        
-        # if self.drawing_idx < len(self.tags):
-        #     self.drawing_idx = len(self.tags)
-        #     self.ui_main.horizontalSlider_Graphic.setValue(len(self.tags))
     
     def slot_clean_receive(self):
         self.ui_main.plainTextEdit_Hex.clear()
@@ -725,11 +715,10 @@ class IndoorLocation(QObject):
                     
                     while (len(port.rx_cache) >= 32):                 # 至少收到了一个包
                         if((0xFF == port.rx_cache[0]) and (0x02 == port.rx_cache[1])):
-                            
                             self.new_pkg.update(port.rx_cache[0:32])
                             port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
                             
-                            data_text.appendPlainText(self.new_pkg.str_pkg)
+                            data_text.appendPlainText(self.new_pkg.str_record)
                             
                             # self.tag.stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                             # self.tag.stamp += ' %12.6f' %(time.perf_counter() - self.stamp_record_start)
@@ -746,10 +735,10 @@ class IndoorLocation(QObject):
                             # !!! 这里必须使用 copy 否则缓存的数据总是最后一个包 !!!
                             # ref: https://www.iteye.com/blog/greybeard-1442259
                             # self.tags.append(copy.copy(self.tag))
-                            self.tags.append(copy.deepcopy(self.tag))
+                            # self.tags.append(copy.deepcopy(self.tag))
                             
                             if self.drawing_auto:
-                                self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.tags))
+                                self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.pkgs))
                             
                             # data_text.appendPlainText(pkg.str_pkg)
                             
@@ -770,7 +759,7 @@ class IndoorLocation(QObject):
                             print('finding_header...')
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
             except Exception as e:
-                print('发生异常:')
+                print('发生异常gzj:')
                 print(e)
     
     def draw_a_pkg(self, idx):
@@ -830,18 +819,19 @@ class IndoorLocation(QObject):
         
     
     def update_graphic(self):
-        if self.drawing_idx < len(self.tags):
-            # 取出数据包
-            if self.drawing_auto and self.port.isopen:
+        # if self.drawing_idx < len(self.tags):
+        #     # 取出数据包
+        #     if self.drawing_auto and self.port.isopen:
                 
-                # 开始图形化
-                self.clear_display_2d_matplotlib()
-                self.draw_a_pkg(self.drawing_idx)
-                self.axes_2d_static.figure.canvas.draw()
+        #         # 开始图形化
+        #         self.clear_display_2d_matplotlib()
+        #         self.draw_a_pkg(self.drawing_idx)
+        #         self.axes_2d_static.figure.canvas.draw()
                 
-                self.ui_main.horizontalSlider_Graphic.setValue(self.drawing_idx + 1)
+        #         self.ui_main.horizontalSlider_Graphic.setValue(self.drawing_idx + 1)
                 
-                self.drawing_idx += 1
+        #         self.drawing_idx += 1
+        pass
 
 if __name__ == '__main__':
     app = QApplication([])
