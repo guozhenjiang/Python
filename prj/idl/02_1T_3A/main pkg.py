@@ -20,9 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import struct
-
 import copy
-
 import csv
 
 
@@ -36,23 +34,36 @@ import csv
     QGridLayout
         https://doc.qt.io/qtforpython/PySide2/QtWidgets/QGridLayout.html
 '''
+# 基站
+class Anchor():
+    def __init__(self, id, x, y, z):
+        self.id = id
+        self.x = x
+        self.y = y
+        self.z = z
+    
+    # 显示基站信息
+    def show(self):
+        print('A%02d(%+4d, %+4d, %+4d)' %(self.id, self.x, self.y, self.z))
+
+# 标签
+class Tag():
+    def __init__(self):
+        super().__init__()
+        self.id = 0      # 便签编号
+        self.d = []      # 标签和基站的距离
+        self.r = []      # 标签和基站的信号强度
+        self.x = 0
+        self.y = 0
+        self.z = 0
 
 class Pkg_WZK():
-    stamp = time.localtime()
-    raw = bytes()
+    str_stamp = ''  # 接收到数据包的时间戳
+    raw = bytes()   # 接收到的数据包原始内容
+    anchor_num = 3  # 包中基站个数
+    tag_num = 1     # 包中标签个数
+    tags = []       # 当前包中的标签信息
     
-    x = 0
-    y = 0
-    
-    d0 = 0
-    d1 = 0
-    d2 = 0
-    
-    rssi_a0 = 0
-    rssi_a1 = 0
-    rssi_a2 = 0
-    
-    str_stamp = ''          # 年月日时分秒 time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     str_raw = ''
     str_point = ''
     str_distance = ''
@@ -60,29 +71,30 @@ class Pkg_WZK():
     
     str_pkg = ''
     
-    def __init__(self, raw_bytes):
-        # print(self.duration)
-        # print(raw_bytes)
-        # print(self.raw)
-        
-        self.stamp = time.localtime()
+    def __init__(self):
+        super().__init__()
+        self.tags.clear()
+    
+    def update(self, raw_bytes):
+        self.stamp = self.time_stamp_ms()
         self.raw = raw_bytes
-        
         self.update_val(copy.copy(self.raw))
         self.update_str()
     
     def update_val(self, pkg):
-        self.x = int(np.int16((pkg[9]  << 8) | pkg[10]))
-        self.y = int(np.int16((pkg[11] << 8) | pkg[12]))
-        self.d0 = (pkg[13] << 8) | pkg[14]
-        self.d1 = (pkg[15] << 8) | pkg[16]
-        self.d2 = (pkg[17] << 8) | pkg[18]
-        self.rssi_a0 = int(np.int16((pkg[19] << 8) | pkg[20])) / -100
-        self.rssi_a1 = int(np.int16((pkg[21] << 8) | pkg[22])) / -100
-        self.rssi_a2 = int(np.int16((pkg[23] << 8) | pkg[24])) / -100
-    
+        for i in range(self.tag_num):
+            tag = Tag()
+            tag.id = i
+            tag.x = int(np.int16((pkg[9 + 4*i + 0]  << 8) | pkg[9 + 4*i + 1]))
+            tag.y = int(np.int16((pkg[9 + 4*i + 2]  << 8) | pkg[9 + 4*i + 3]))
+            self.tags.append(tag)
+            
+            for j in range(self.anchor_num):
+                tag[i].d[j] = (pkg[13 + 2*j + 0] << 8) | pkg[13 + 2*j + 1]
+                tag[i].r[j] = (pkg[19 + 2*j + 0] << 8) | pkg[19 + 2*j + 1]
+                tag[i].r[j] = int(np.int16((pkg[19 + 2*j + 0] << 8) | pkg[19 + 2*j + 1])) / -100
+
     def update_str(self):
-        self.str_stamp = self.time_stamp_ms()
         self.str_raw = ''
         for b in self.raw:
             self.str_raw += ' %02X' %(b)
@@ -107,59 +119,26 @@ class Pkg_WZK():
         
         return time_stamp
 
-class Anchor():
-    x = 0
-    y = 0
-    z = 0
-
-class Tag():
-    x = 0
-    y = 0
-    z = 0
-    
-    stamp = ''
-    idx = 0
-    raw_data = b''
-    
-    d0 = 0
-    d1 = 0
-    d2 = 0
-    
-    rssi_a0 = 0
-    rssi_a1 = 0
-    rssi_a2 = 0
-
 class IndoorLocation(QObject):
-    anchor0 = Anchor()
-    anchor1 = Anchor()
-    anchor2 = Anchor()
-    tag = Tag()
+    anchors = []
+    anchors.append(Anchor(0, 0, 0, 0))
+    anchors.append(Anchor(1, 0, 150, 0))
+    anchors.append(Anchor(2, 150, 0, 0))
     
+    for anchor in anchors:
+        anchor.show()
+    
+    tag = Tag()
     tags = []   # 存储接收到的每个点
     
-    # new_pkg = Pkg_WZK()
+    new_pkg = Pkg_WZK()
     pkgs = []
     
     drawing_idx = 0
     drawing_auto = True
     stamp_record_start = 0
     
-    # 实例化
     def __init__(self):
-        self.name = 'IDL'
-        
-        self.anchor0.x = 0
-        self.anchor0.y = 0
-        self.anchor0.z = 0.0
-        
-        self.anchor1.x = 300.0
-        self.anchor1.y = 0.0
-        self.anchor1.z = 0.0
-        
-        self.anchor2.x = 0.0
-        self.anchor2.y = 300.0
-        self.anchor2.z = 0.0
-        
         self.pkg_byte_id = 0
         self.uart_pkg = np.zeros(100, dtype=int, order='C')         # 新包缓存
         
@@ -180,18 +159,6 @@ class IndoorLocation(QObject):
         self.log_stream = QTextStream(log_file)
         self.log_stream.setCodec('UTF-8')
         self.log_stream.seek(log_file.size())
-        
-        # print(self.log_stream.readAll())
-        
-        # print('%s 每行内容' %(log_file_loc))
-        # while(not log_file.atEnd()):
-        #     line = log_file.readLine()
-        #     print(line)
-        
-        # print('使用 QTextStream 写 log')
-        # self.log_stream.seek(log_file.size())
-        # time.sleep(0.5)
-        # self.log_stream << self.log_stream.pos() << '|' << datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') << '\r\n'
         
         file_loc_ui_main = './ui_idl_main.ui'
         self.ui_main = QUiLoader().load(file_loc_ui_main)
@@ -229,7 +196,6 @@ class IndoorLocation(QObject):
         self.log_stream << new_log_str << '\r\n'
         self.ui_main.plainTextEdit_Log.appendPlainText(new_log_str)
         # self.ui_main.plainTextEdit_Log.moveCursor(QTextCursor.End)
-        # self.ui_main.plainTextEdit.setSelection()
         print(new_log_str)
         pass
     
@@ -262,7 +228,7 @@ class IndoorLocation(QObject):
         self.axes_2d_static = self.canvas_2d_matplotlib.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
         self.axes_2d_static.grid(True)
         
-        # str_item = str(self.anchor0.x)
+        # str_item = str(self.anchors[0].x)
         # newItem = QTabWidgetItem(str_item)
         # self.ui_main.tableWidget_DataInfo.setItem(0, 0, newItem)
         # print(str_item)
@@ -362,18 +328,18 @@ class IndoorLocation(QObject):
         self.axes_2d_static.add_artist(circle)
     
     def draw_distance_circles(self):
-        self.draw_circle(self.anchor0.x, self.anchor0.y, self.tag.d0, 'r')
-        self.draw_circle(self.anchor1.x, self.anchor1.y, self.tag.d1, 'g')
-        self.draw_circle(self.anchor2.x, self.anchor2.y, self.tag.d2, 'b')
+        self.draw_circle(self.anchors[0].x, self.anchors[0].y, self.tag.d0, 'r')
+        self.draw_circle(self.anchors[1].x, self.anchors[1].y, self.tag.d1, 'g')
+        self.draw_circle(self.anchors[2].x, self.anchors[2].y, self.tag.d2, 'b')
     
     def draw_rssi_circles(self):
-        # self.draw_circle(self.anchor0.x, self.anchor0.y, self.tag.rssi_a0, 'gray')
-        # self.draw_circle(self.anchor1.x, self.anchor1.y, self.tag.rssi_a1, 'gray')
-        # self.draw_circle(self.anchor2.x, self.anchor2.y, self.tag.rssi_a2, 'gray')
+        # self.draw_circle(self.anchors[0].x, self.anchors[0].y, self.tag.rssi_a0, 'gray')
+        # self.draw_circle(self.anchors[1].x, self.anchors[1].y, self.tag.rssi_a1, 'gray')
+        # self.draw_circle(self.anchors[2].x, self.anchors[2].y, self.tag.rssi_a2, 'gray')
         
-        self.draw_circle(self.anchor0.x, self.anchor0.y, 100, 'gray')
-        self.draw_circle(self.anchor1.x, self.anchor1.y, 100, 'gray')
-        self.draw_circle(self.anchor2.x, self.anchor2.y, 100, 'gray')
+        self.draw_circle(self.anchors[0].x, self.anchors[0].y, 100, 'gray')
+        self.draw_circle(self.anchors[1].x, self.anchors[1].y, 100, 'gray')
+        self.draw_circle(self.anchors[2].x, self.anchors[2].y, 100, 'gray')
         pass
     
     def draw_anchor_to_anchor_line(self, anchor_0, anchor_1):
@@ -389,17 +355,12 @@ class IndoorLocation(QObject):
         self.axes_2d_static.plot(x_s, y_s, '-', c='c', alpha=0.3, lw=0.5)
         pass
     
-    def draw_anchor_point(self, anchor, color):
-        circle = plt.Circle((anchor['x'], anchor['y']), radius=5, color=color, ec='c', alpha=1, picker=5)
-        self.axes_2d_static.add_artist(circle)
-        pass
-    
     def draw_anchor_points(self):
-        circle = plt.Circle((self.anchor0.x, self.anchor0.y), radius=5, color='r', ec='c', alpha=1, picker=5)
+        circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), radius=5, color='r', ec='c', alpha=1, picker=5)
         self.axes_2d_static.add_artist(circle)
-        circle = plt.Circle((self.anchor1.x, self.anchor1.y), radius=5, color='g', ec='c', alpha=1, picker=5)
+        circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), radius=5, color='g', ec='c', alpha=1, picker=5)
         self.axes_2d_static.add_artist(circle)
-        circle = plt.Circle((self.anchor2.x, self.anchor2.y), radius=5, color='b', ec='c', alpha=1, picker=5)
+        circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), radius=5, color='b', ec='c', alpha=1, picker=5)
         self.axes_2d_static.add_artist(circle)
     
     def draw_Tag_to_3_Anchor_(self, d1, d2, d3):
@@ -601,30 +562,30 @@ class IndoorLocation(QObject):
         pass
     
     def update_2d_matplotlib_limit(self):
-        x_min = self.anchor0.x
-        x_max = self.anchor0.x
-        y_min = self.anchor0.y
-        y_max = self.anchor0.y
+        x_min = self.anchors[0].x
+        x_max = self.anchors[0].x
+        y_min = self.anchors[0].y
+        y_max = self.anchors[0].y
         
-        if(self.anchor1.x < x_min):
-            x_min = self.anchor1.x
-        if(self.anchor2.x < x_min):
-            x_min = self.anchor2.x
+        if(self.anchors[1].x < x_min):
+            x_min = self.anchors[1].x
+        if(self.anchors[2].x < x_min):
+            x_min = self.anchors[2].x
         
-        if(self.anchor1.x > x_max):
-            x_max = self.anchor1.x
-        if(self.anchor2.x > x_max):
-            x_max = self.anchor2.x
+        if(self.anchors[1].x > x_max):
+            x_max = self.anchors[1].x
+        if(self.anchors[2].x > x_max):
+            x_max = self.anchors[2].x
         
-        if(self.anchor1.y < y_min):
-            y_min = self.anchor1.y
-        if(self.anchor2.y < y_min):
-            y_min = self.anchor2.y
+        if(self.anchors[1].y < y_min):
+            y_min = self.anchors[1].y
+        if(self.anchors[2].y < y_min):
+            y_min = self.anchors[2].y
         
-        if(self.anchor1.y > y_max):
-            y_max = self.anchor1.y
-        if(self.anchor2.y > y_max):
-            y_max = self.anchor2.y
+        if(self.anchors[1].y > y_max):
+            y_max = self.anchors[1].y
+        if(self.anchors[2].y > y_max):
+            y_max = self.anchors[2].y
         
         self.keep_out = 200
         
@@ -641,16 +602,16 @@ class IndoorLocation(QObject):
         # a0_x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
         # print(a0_x)
         
-        self.anchor0.x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
-        self.anchor0.y = float(self.ui_main.tableWidget_DataInfo.item(0, 1).text())
+        self.anchors[0].x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
+        self.anchors[0].y = float(self.ui_main.tableWidget_DataInfo.item(0, 1).text())
         self.anchor0.z = float(self.ui_main.tableWidget_DataInfo.item(0, 2).text())
         
-        self.anchor1.x = float(self.ui_main.tableWidget_DataInfo.item(1, 0).text())
-        self.anchor1.y = float(self.ui_main.tableWidget_DataInfo.item(1, 1).text())
+        self.anchors[1].x = float(self.ui_main.tableWidget_DataInfo.item(1, 0).text())
+        self.anchors[1].y = float(self.ui_main.tableWidget_DataInfo.item(1, 1).text())
         self.anchor1.z = float(self.ui_main.tableWidget_DataInfo.item(1, 2).text())
         
-        self.anchor2.x = float(self.ui_main.tableWidget_DataInfo.item(2, 0).text())
-        self.anchor2.y = float(self.ui_main.tableWidget_DataInfo.item(2, 1).text())
+        self.anchors[2].x = float(self.ui_main.tableWidget_DataInfo.item(2, 0).text())
+        self.anchors[2].y = float(self.ui_main.tableWidget_DataInfo.item(2, 1).text())
         self.anchor2.z = float(self.ui_main.tableWidget_DataInfo.item(2, 2).text())
         
         self.update_2d_matplotlib_limit()
@@ -765,25 +726,22 @@ class IndoorLocation(QObject):
                     while (len(port.rx_cache) >= 32):                 # 至少收到了一个包
                         if((0xFF == port.rx_cache[0]) and (0x02 == port.rx_cache[1])):
                             
-                            new_pkg = port.rx_cache[0:32]
+                            self.new_pkg.update(port.rx_cache[0:32])
                             port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
                             
-                            duration = time.perf_counter() - self.stamp_record_start
+                            data_text.appendPlainText(self.new_pkg.str_pkg)
                             
-                            
-                            pkg = Pkg_WZK(copy.copy(new_pkg))
-                            
-                            self.tag.stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                            self.tag.stamp += ' %12.6f' %(time.perf_counter() - self.stamp_record_start)
-                            self.tag.raw_data = new_pkg
-                            self.tag.x = int(np.int16((new_pkg[9]  << 8) | new_pkg[10]))
-                            self.tag.y = int(np.int16((new_pkg[11] << 8) | new_pkg[12]))
-                            self.tag.d0 = (new_pkg[13] << 8) | new_pkg[14]
-                            self.tag.d1 = (new_pkg[15] << 8) | new_pkg[16]
-                            self.tag.d2 = (new_pkg[17] << 8) | new_pkg[18]
-                            self.tag.rssi_a0 = int(np.int16((new_pkg[19] << 8) | new_pkg[20])) / -100
-                            self.tag.rssi_a1 = int(np.int16((new_pkg[21] << 8) | new_pkg[22])) / -100
-                            self.tag.rssi_a2 = int(np.int16((new_pkg[23] << 8) | new_pkg[24])) / -100
+                            # self.tag.stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                            # self.tag.stamp += ' %12.6f' %(time.perf_counter() - self.stamp_record_start)
+                            # self.tag.raw_data = new_pkg
+                            # self.tag.x = int(np.int16((new_pkg[9]  << 8) | new_pkg[10]))
+                            # self.tag.y = int(np.int16((new_pkg[11] << 8) | new_pkg[12]))
+                            # self.tag.d0 = (new_pkg[13] << 8) | new_pkg[14]
+                            # self.tag.d1 = (new_pkg[15] << 8) | new_pkg[16]
+                            # self.tag.d2 = (new_pkg[17] << 8) | new_pkg[18]
+                            # self.tag.rssi_a0 = int(np.int16((new_pkg[19] << 8) | new_pkg[20])) / -100
+                            # self.tag.rssi_a1 = int(np.int16((new_pkg[21] << 8) | new_pkg[22])) / -100
+                            # self.tag.rssi_a2 = int(np.int16((new_pkg[23] << 8) | new_pkg[24])) / -100
                             
                             # !!! 这里必须使用 copy 否则缓存的数据总是最后一个包 !!!
                             # ref: https://www.iteye.com/blog/greybeard-1442259
@@ -793,7 +751,8 @@ class IndoorLocation(QObject):
                             if self.drawing_auto:
                                 self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.tags))
                             
-                            data_text.appendPlainText(pkg.str_pkg)
+                            # data_text.appendPlainText(pkg.str_pkg)
+                            
                             
                             # self.log(   '[% 8.3fs][id:% 8d][+% 4dB = % 4dB] => (% 4d, % 4d) [% 4d, % 4d, % 4d] [% 4dB]'\
                             #             %(  gap,
@@ -815,58 +774,59 @@ class IndoorLocation(QObject):
                 print(e)
     
     def draw_a_pkg(self, idx):
-        # 显示解析后的包信息
-        str_pkg_info = ''
+        # # 显示解析后的包信息
+        # str_pkg_info = ''
         
-        if idx < len(self.tags):
-            tag_pkg = self.tags[idx]
+        # if idx < len(self.tags):
+        #     tag_pkg = self.tags[idx]
             
-            str_pkg_info += tag_pkg.stamp
-            str_pkg_info += ' P(%+3d, %+3d)' %(tag_pkg.x, tag_pkg.y)
-            str_pkg_info += ' D(%3d, %3d, %3d)' %(tag_pkg.d0, tag_pkg.d1, tag_pkg.d2)
-            str_pkg_info += ' R(%+3d, %+3d, %+3d)' %(tag_pkg.rssi_a0, tag_pkg.rssi_a1, tag_pkg.rssi_a2)
-            # print('设置包信息', str_pkg_info, time.time())
-            self.ui_main.lineEdit_PkgInfo.setText(str_pkg_info)
+        #     str_pkg_info += tag_pkg.stamp
+        #     str_pkg_info += ' P(%+3d, %+3d)' %(tag_pkg.x, tag_pkg.y)
+        #     str_pkg_info += ' D(%3d, %3d, %3d)' %(tag_pkg.d0, tag_pkg.d1, tag_pkg.d2)
+        #     str_pkg_info += ' R(%+3d, %+3d, %+3d)' %(tag_pkg.rssi_a0, tag_pkg.rssi_a1, tag_pkg.rssi_a2)
+        #     # print('设置包信息', str_pkg_info, time.time())
+        #     self.ui_main.lineEdit_PkgInfo.setText(str_pkg_info)
             
-            # # 开始图形化
-            # self.clear_display_2d_matplotlib()
+        #     # # 开始图形化
+        #     # self.clear_display_2d_matplotlib()
             
-            # draw tag_pkg point
-            circle = plt.Circle((tag_pkg.x, tag_pkg.y), 3, color='c', ec='c', alpha=0.8, picker=5)
-            self.axes_2d_static.add_artist(circle)
+        #     # draw tag_pkg point
+        #     circle = plt.Circle((tag_pkg.x, tag_pkg.y), 3, color='c', ec='c', alpha=0.8, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
             
-            # draw anchor points
-            circle = plt.Circle((self.anchor0.x, self.anchor0.y), radius=5, color='r', ec='c', alpha=1, picker=5)
-            self.axes_2d_static.add_artist(circle)
-            circle = plt.Circle((self.anchor1.x, self.anchor1.y), radius=5, color='g', ec='c', alpha=1, picker=5)
-            self.axes_2d_static.add_artist(circle)
-            circle = plt.Circle((self.anchor2.x, self.anchor2.y), radius=5, color='b', ec='c', alpha=1, picker=5)
-            self.axes_2d_static.add_artist(circle)
+        #     # draw anchors points
+        #     circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), radius=5, color='r', ec='c', alpha=1, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
+        #     circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), radius=5, color='g', ec='c', alpha=1, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
+        #     circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), radius=5, color='b', ec='c', alpha=1, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
             
-            # draw distance circles
-            circle = plt.Circle((self.anchor0.x, self.anchor0.y), tag_pkg.d0, color='r', ec='c', alpha=0.2, picker=5)
-            self.axes_2d_static.add_artist(circle)
-            circle = plt.Circle((self.anchor1.x, self.anchor1.y), tag_pkg.d1, color='g', ec='c', alpha=0.2, picker=5)
-            self.axes_2d_static.add_artist(circle)
-            circle = plt.Circle((self.anchor2.x, self.anchor2.y), tag_pkg.d2, color='b', ec='c', alpha=0.2, picker=5)
-            self.axes_2d_static.add_artist(circle)
+        #     # draw distance circles
+        #     circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), tag_pkg.d0, color='r', ec='c', alpha=0.2, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
+        #     circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), tag_pkg.d1, color='g', ec='c', alpha=0.2, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
+        #     circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), tag_pkg.d2, color='b', ec='c', alpha=0.2, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
             
-            # draw rssi circle
-            circle = plt.Circle((self.anchor0.x, self.anchor0.y), tag_pkg.rssi_a0, color='gray', ec='c', alpha=0.2, picker=5)
-            self.axes_2d_static.add_artist(circle)
-            circle = plt.Circle((self.anchor1.x, self.anchor1.y), tag_pkg.rssi_a1, color='gray', ec='c', alpha=0.2, picker=5)
-            self.axes_2d_static.add_artist(circle)
-            circle = plt.Circle((self.anchor2.x, self.anchor2.y), tag_pkg.rssi_a2, color='gray', ec='c', alpha=0.2, picker=5)
-            self.axes_2d_static.add_artist(circle)
+        #     # draw rssi circle
+        #     circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), tag_pkg.rssi_a0, color='gray', ec='c', alpha=0.2, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
+        #     circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), tag_pkg.rssi_a1, color='gray', ec='c', alpha=0.2, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
+        #     circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), tag_pkg.rssi_a2, color='gray', ec='c', alpha=0.2, picker=5)
+        #     self.axes_2d_static.add_artist(circle)
             
-            # circle = plt.Circle((self.anchor0.x, self.anchor0.y), 100, color='gray', ec='c', alpha=0.2, picker=5)
-            # self.axes_2d_static.add_artist(circle)
-            # circle = plt.Circle((self.anchor1.x, self.anchor1.y), 100, color='gray', ec='c', alpha=0.2, picker=5)
-            # self.axes_2d_static.add_artist(circle)
-            # circle = plt.Circle((self.anchor2.x, self.anchor2.y), 100, color='gray', ec='c', alpha=0.2, picker=5)
-            # self.axes_2d_static.add_artist(circle)
+        #     # circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), 100, color='gray', ec='c', alpha=0.2, picker=5)
+        #     # self.axes_2d_static.add_artist(circle)
+        #     # circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), 100, color='gray', ec='c', alpha=0.2, picker=5)
+        #     # self.axes_2d_static.add_artist(circle)
+        #     # circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), 100, color='gray', ec='c', alpha=0.2, picker=5)
+        #     # self.axes_2d_static.add_artist(circle)
             
-            # self.axes_2d_static.figure.canvas.draw()
+        #     # self.axes_2d_static.figure.canvas.draw()
+        pass
         
     
     def update_graphic(self):
