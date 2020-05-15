@@ -32,8 +32,13 @@ class Port(QObject):
         port_list.sort()                                            # 对扫描结果排序
         
         for i in port_list:
-            com_str = i[0] + ' ' + i[1].split('(')[0]
-            # print(com)
+            print()
+            com_str = ''
+            for j in i:
+                # print(j)
+                com_str += j + ' '
+            
+            print(com_str)
             self.valid.append(com_str)
     
     def set_parity(self, str_parity):

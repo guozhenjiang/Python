@@ -1,5 +1,7 @@
-from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget
-from PySide2.QtGui import QTextCursor
+from PySide2 import QtGui, QtWidgets, QtCore
+
+from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog
+from PySide2.QtGui import QTextCursor, QTextFormat, QBrush, QColor
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile, QTextStream, QTimer, Signal, Slot
 from lib_comport import *
@@ -34,6 +36,20 @@ import csv
     QGridLayout
         https://doc.qt.io/qtforpython/PySide2/QtWidgets/QGridLayout.html
 '''
+
+
+def time_stamp():
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+def time_stamp_ms():
+    ct = time.time()
+    local_time = time.localtime(ct)
+    data_head = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+    data_secs = (ct - int(ct)) * 1000
+    stamp_ms_str = "%s.%03d" % (data_head, data_secs)
+    
+    return stamp_ms_str
+
 # 基站
 class Anchor():
     def __init__(self, id, x, y, z):
@@ -56,76 +72,103 @@ class Tag():
         self.x = 0
         self.y = 0
         self.z = 0
+'''
+    record 1T3A:
+        stamp(2020-05-14 16:30:31.247),
+        tag[(x0, y0, z0)],
+        distance(d0, d1, d2)
+        rssi(r0, r1, r2)
+        pkg( FF 02 ...),
+        anchor[(x0, y0, z0), (x1, y1, z1), (x2, y2, z2)]
+'''
 
-class Pkg_WZK():
+class Record():
+    def __init__(self):
+        self.recording = False
+        self.start()
+    
+    def start(self):
+        self.len = 0
+        self.record = ''
+    
+class Pkg_WZK_1T3A():
+    '''
+    00 01 02 03 04 05 06 07 08 09  10  11  12  13   14   15   16   17   18   19        20        21        22        23        24        25 26 27 28 29 30 31
+    FF 02 XX XX XX XX XX XX XX x_H x_L y_H y_L d0_H d0_L d1_H d1_L d2_H d2_L rssi_a0_H rssi_a0_L rssi_a1_H rssi_a1_L rssi_a2_H rssi_a2_L XX XX XX XX XX XX XX
+    (x, y)                          标签坐标
+    (d0, d1, d2)                    标签到 3 个基站的距离 单位 cm
+    (rssi_a0, rssi_a1, rssi_a2)     便签到三个基站的信号强度
+    '''
     def __init__(self):
         super().__init__()
-        self.raw = bytes()      # 接收到的数据包原始内容
-        self.anchor_num = 3     # 包中基站个数
-        self.tag_num = 1        # 包中标签个数
-        self.tags = []          # 当前包中的标签信息
-        self.str_record = ''    # 记录到文件的字符串
+        self.len = 32               # 包长
+        self.anchor_num = 3         # 单个数据包种有多少个基站
+        self.tag_num = 1            # 包中标签个数
+        self.tags = []              # 当前包中的标签信息
+        self.info_str = ''          # 记录到文件的字符串
+        
+        self.info_stamp = ''        # 时间戳
+        self.info_tag = ''          # 标签坐标
+        self.info_distance = ''     # 标签到基站的距离
+        self.info_rssi = ''         # 标签到基站的信号强度
+        self.info_pkg = ''          # 串口收到的数据包
     
     def update(self, raw_bytes):
-        # 从包数据解析信息值
-        for i in range(self.tag_num):
-            self.tags.append(Tag())
-            self.tags[i].x = int(np.int16((raw_bytes[9 + 4*i + 0]  << 8) | raw_bytes[9 + 4*i + 1]))
-            self.tags[i].y = int(np.int16((raw_bytes[9 + 4*i + 2]  << 8) | raw_bytes[9 + 4*i + 3]))
+        if (0xFF == raw_bytes[0]) and (0x02 == raw_bytes[1]):
+            # 解析信息值
+            for i in range(self.tag_num):
+                self.tags.append(Tag())
+                self.tags[i].x = int(np.int16((raw_bytes[9 + 4*i + 0]  << 8) | raw_bytes[9 + 4*i + 1]))
+                self.tags[i].y = int(np.int16((raw_bytes[9 + 4*i + 2]  << 8) | raw_bytes[9 + 4*i + 3]))
+                
+                for j in range(self.anchor_num):
+                    self.tags[i].d.append((raw_bytes[13 + 2*j + 0] << 8) | raw_bytes[13 + 2*j + 1])
+                    self.tags[i].r.append(int(np.int16((raw_bytes[19 + 2*j + 0] << 8) | raw_bytes[19 + 2*j + 1])) / 100)
             
-            for j in range(self.anchor_num):
-                self.tags[i].d.append((raw_bytes[13 + 2*j + 0] << 8) | raw_bytes[13 + 2*j + 1])
-                self.tags[i].r.append(int(np.int16((raw_bytes[19 + 2*j + 0] << 8) | raw_bytes[19 + 2*j + 1])) / 100)
-
-        # 记录时间戳
-        self.str_record = self.time_stamp_ms()
-        
-        for i in range(self.tag_num):
-            # 坐标点
-            self.str_record += ' P(%+4d, %+4d)' %(self.tags[i].x, self.tags[i].y)
+            # 更新信息字符串
+            self.info_stamp = time_stamp_ms()
             
-            # 距离
-            self.str_record += ' D('
-            for j in range(self.anchor_num):
-                self.str_record += '%3d' %(self.tags[i].d[j])
-                if j != self.anchor_num-1:
-                    self.str_record += ', '
-            self.str_record += ')'
+            for i in range(self.tag_num):
+                # 坐标
+                self.info_tag = ' T(%4d, %4d)' %(self.tags[i].x, self.tags[i].y)
+                
+                # 距离
+                self.info_distance = ' D('
+                for j in range(self.anchor_num):
+                    self.info_distance += '%3d' %(self.tags[i].d[j])
+                    if j != self.anchor_num-1:
+                        self.info_distance += ', '
+                self.info_distance += ')'
+                
+                # 信号强度
+                self.info_rssi = ' R('
+                for j in range(self.anchor_num):
+                    self.info_rssi += '%3d' %(self.tags[i].r[j])
+                    if j != self.anchor_num-1:
+                        self.info_rssi += ', '
+                self.info_rssi += ')'
+                
+            # 原始包
+            self.info_pkg = ''
+            for b in  raw_bytes:
+                self.info_pkg += ' %02X' %(b)
             
-            # 信号强度
-            self.str_record += ' R('
-            for j in range(self.anchor_num):
-                self.str_record += '%3d' %(self.tags[i].r[j])
-                if j != self.anchor_num-1:
-                    self.str_record += ', '
-            self.str_record += ')'
+            self.info_str = self.info_stamp + self.info_tag + self.info_distance + self.info_rssi + self.info_pkg
             
-        # 原始包
-        for b in  raw_bytes:
-            self.str_record += ' %02X' %(b)
-
-    def time_stamp(self):
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-
-    def time_stamp_ms(self):
-        ct = time.time()
-        local_time = time.localtime(ct)
-        data_head = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
-        data_secs = (ct - int(ct)) * 1000
-        time_stamp = "%s.%03d" % (data_head, data_secs)
-        
-        return time_stamp
+            return True
+        else:
+            return False
 
 class IndoorLocation(QObject):
     anchors = []
-    anchors.append(Anchor(0, 0, 0, 0))
-    anchors.append(Anchor(1, 0, 150, 0))
-    anchors.append(Anchor(2, 150, 0, 0))
+    anchors.append(Anchor(0, 0, 0, 200))
+    anchors.append(Anchor(1, 0, 200, 0))
+    anchors.append(Anchor(2, 200, 0, 0))
     
     for anchor in anchors:
         anchor.show()
     
-    new_pkg = Pkg_WZK()
+    pkg_wzk = Pkg_WZK_1T3A()
     pkgs = []
     
     drawing_idx = 0
@@ -133,16 +176,8 @@ class IndoorLocation(QObject):
     stamp_record_start = 0
     
     def __init__(self):
-        self.pkg_byte_id = 0
-        self.uart_pkg = np.zeros(100, dtype=int, order='C')         # 新包缓存
-        
-        self.enter_qtimer_gap = 0
-        self.enter_qtimer_stamp = time.perf_counter()
-        self.enter_qtimer_stamp_last = self.enter_qtimer_stamp
-        
-        self.read_serial_gap = 0
-        self.read_serial_stamp = time.perf_counter()
-        self.read_serial_stamp_last = self.read_serial_stamp
+        self.record = Record()                              # 数据记录
+        self.ui_cnt_recording = 0
         
         log_file_loc = './log.txt'
         print('以读写打开 %s' %(log_file_loc))
@@ -161,6 +196,23 @@ class IndoorLocation(QObject):
         
         # 初始化
         self.init_ui()
+        
+        original_size = self.ui_main.dockWidget_Hex.size()
+        # print()
+        # print('************************')
+        # print(type(original_size))
+        # print(original_size)
+        # print(original_size.width(), original_size.height())
+        # print('************************')
+        # print()
+        
+        self.ui_main.dockWidget_Hex.resize(100, original_size.height())     # resize 对 DockWidget 无效
+        
+        for i in range(len(self.anchors)):
+            self.ui_main.tableWidget_DataInfo.setItem(i, 0, QTableWidgetItem(str(self.anchors[i].x)))
+            self.ui_main.tableWidget_DataInfo.setItem(i, 1, QTableWidgetItem(str(self.anchors[i].y)))
+            self.ui_main.tableWidget_DataInfo.setItem(i, 2, QTableWidgetItem(str(self.anchors[i].z)))
+        
         self.init_signal_slot()
         # self.slot_port_scan()
         self.slot_PortComboBox_showPopup()
@@ -196,21 +248,23 @@ class IndoorLocation(QObject):
     def init_ui(self):
         self.log('初始化 UI')
         ui = self.ui_main
-        ui.action_ViewSet.checked = True
-        ui.action_ViewLog.checked = True
-        ui.action_ViewHex.checked = True
-        # ui.action_ViewAscii.checked = False
         
-        ui.dockWidget_Set.show()
-        ui.dockWidget_Log.show()
-        ui.dockWidget_Hex.show()
+        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\map_128x128.ico'))
+        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_1'))
+        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_2'))
+        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\social_media'))
         
-        ui.action_ViewSet.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
-        ui.action_ViewLog.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
-        ui.action_ViewHex.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Hex, ui.action_ViewHex.isChecked()))
+        self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1'))
+        self.ui_main.pushButton_RecordSave.setIcon(QtGui.QPixmap(r'.\ico\save'))
+        self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play'))
+        self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete'))
+        self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir'))
+        self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh'))
         
         ui.comboBox_name_raw.deleteLater()  # 删掉 UI 生成的端口选择下拉框控件
         ui.comboBox_name = PortComboBox()   # 用自己重写的下拉框控件替换被删的
+        # ui.comboBox_name.setMaximumWidth(150)
+        
         ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1) # 添加到原来的布局框中相同位置
         
         # 将 Matlabplotlib 2D 图像嵌入界面
@@ -222,21 +276,7 @@ class IndoorLocation(QObject):
         self.axes_2d_static = self.canvas_2d_matplotlib.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
         self.axes_2d_static.grid(True)
         
-        # str_item = str(self.anchors[0].x)
-        # newItem = QTabWidgetItem(str_item)
-        # self.ui_main.tableWidget_DataInfo.setItem(0, 0, newItem)
-        # print(str_item)
-        # item = self.ui_main.tableWidget_DataInfo.item(0, 0)
-        # print(type(item))
-        # item.setTabText.setText('hello')
-        # self.ui_main.tableWidget_DataInfo.item(0, 0).setItem('hello')
-        # item = self.ui_main.tableWidget_DataInfo.setTabText(0, 0)
-        # self.ui_main.tableWidget_DataInfo.setTabText(0, 0, 'hello')
-        
         self.update_2d_matplotlib_limit()
-        
-        # self.timer_2d_matplotlib = self.canvas_2d_matplotlib.new_timer(100, [(self.update_display, (), {})])
-        # self.timer_2d_matplotlib.start()
         
         self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
         self.ui_main.horizontalSlider_Graphic.setSingleStep(1)
@@ -256,8 +296,26 @@ class IndoorLocation(QObject):
         self.log('初始化 Signal Slot')
         ui = self.ui_main
         
+        ui.action_ViewSet.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
+        ui.action_ViewLog.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
+        ui.action_ViewHex.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Hex, ui.action_ViewHex.isChecked()))
+        ui.action_ViewInfo.changed.connect( lambda:self.slot_dock_show_hide(ui.dockWidget_Info, ui.action_ViewInfo.isChecked()))
+        
+        ui.dockWidget_Set.visibilityChanged.connect(    lambda visable:self.slot_win_set_visibility_changed(visable))
+        ui.dockWidget_Log.visibilityChanged.connect(    lambda visable:self.slot_win_log_visibility_changed(visable))
+        ui.dockWidget_Hex.visibilityChanged.connect(    lambda visable:self.slot_win_hex_visibility_changed(visable))
+        ui.dockWidget_Info.visibilityChanged.connect(   lambda visable:self.slot_win_info_visibility_changed(visable))
+        
         ui.comboBox_name.signal_PortComboBox_showPopup.connect(self.slot_PortComboBox_showPopup)
-        ui.comboBox_name.currentTextChanged.connect(            lambda:self.slot_port_name())
+        ui.comboBox_name.currentTextChanged.connect(    lambda:self.slot_port_name())
+        
+        ui.comboBox_name.activated.connect(             lambda:self.slot_port_name_activated())
+        ui.comboBox_name.currentIndexChanged.connect(   lambda idx:self.slot_port_name_currentIndexChanged(idx))
+        ui.comboBox_name.editTextChanged.connect(       lambda:self.slot_port_name_editTextChanged())
+        ui.comboBox_name.highlighted.connect(           lambda idx:self.slot_port_name_highlighted(idx))
+        ui.comboBox_name.textActivated.connect(         lambda:self.slot_port_name_textActivated())
+        ui.comboBox_name.textHighlighted.connect(       lambda:self.slot_port_name_textHighlighted())
+        
         ui.comboBox_baud.currentTextChanged.connect(            lambda:self.slot_port_baud())
         ui.comboBox_byte.currentTextChanged.connect(            lambda:self.slot_port_byte())
         ui.comboBox_parity.currentTextChanged.connect(          lambda:self.slot_port_parity())
@@ -270,40 +328,24 @@ class IndoorLocation(QObject):
         ui.pushButton_StartSend.clicked.connect(                lambda:self.slot_send())
         ui.tableWidget_DataInfo.itemChanged.connect(            lambda:self.slot_tableWidget_Anchor_changed())
         ui.comboBox_Mode.currentTextChanged.connect(            lambda:self.slot_mode_changed())
-        ui.pushButton_StartRecord.clicked.connect(              lambda:self.slot_start_record())
+        ui.pushButton_RecordStart.clicked.connect(              lambda:self.slot_record_start_stop())
         ui.horizontalSlider_Graphic.sliderPressed.connect(      lambda:self.slot_graphic_slider_pressed())
         ui.horizontalSlider_Graphic.sliderReleased.connect(     lambda:self.slot_graphic_slider_released())
         ui.horizontalSlider_Graphic.valueChanged.connect(       lambda:self.slot_graphic_slider_changed())
         
-        ui.pushButton_SaveRecord.clicked.connect(               lambda:self.slot_save_record())
-        ui.pushButton_SaveRecord.clicked.connect(               lambda:self.slot_open_record())
+        ui.pushButton_RecordSave.clicked.connect(               lambda:self.slot_save_record())
+        ui.pushButton_RecordSave.clicked.connect(               lambda:self.slot_open_record())
+        
+        ui.pushButton_RecordDir.clicked.connect(                lambda:self.slot_open_record_dir())
     
-    def update_display(self):
-        if(self.port.isopen):
-            if('DongHan' == self.ui_main.comboBox_Mode.currentText()):
-                self.update_display_DongHan()
-                pass
-            elif('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
-                self.update_display_WangZeKun()
-                pass
-        pass
-        
-    def update_display_DongHan(self):
-        self.clear_display_2d_matplotlib()
-        
-        self.draw_anchor_to_anchor_line(self.Anchor0, self.Anchor1)
-        self.draw_anchor_to_anchor_line(self.Anchor0, self.Anchor2)
-        self.draw_anchor_to_anchor_line(self.Anchor1, self.Anchor2)
-        
-        self.axes_2d_static.figure.canvas.draw()
-        pass
-        
-    def update_display_WangZeKun(self):
-        # self.clear_display_2d_matplotlib()
-        
-        self.draw_tag_point()
-        self.axes_2d_static.figure.canvas.draw()
-        pass
+    # 更新需要动态显示的 UI
+    def update_dynamic_ui_500ms(self):
+        self.ui_cnt_recording += 1
+        if(self.record.recording):
+            if(1 == self.ui_cnt_recording % 2):
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_2'))
+            elif(0 == self.ui_cnt_recording % 2):
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1'))
     
     def draw_ref_line(self):
         x_s = [100, 300, 300, 100, 100]
@@ -390,14 +432,28 @@ class IndoorLocation(QObject):
         else:
             pass
     
-    def slot_start_record(self):
-        # self.tags.clear()
-        self.drawing_idx = 0
-        self.stamp_record_start = time.perf_counter()
-        self.ui_main.horizontalSlider_Graphic.setValue(0)
-        self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
-        self.ui_main.plainTextEdit_Hex.clear()
-    
+    def slot_record_start_stop(self):
+        self.record.recording = not self.record.recording
+        
+        # 开始记录
+        if(self.record.recording):
+            self.record.start()
+            self.ui_main.pushButton_RecordStart.setText('结束')
+            self.ui_main.pushButton_RecordStart.setStyleSheet('background-color:gray')
+            
+            # self.tags.clear()
+            self.drawing_idx = 0
+            self.stamp_record_start = time.perf_counter()
+            self.ui_main.horizontalSlider_Graphic.setValue(0)
+            self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
+            self.ui_main.plainTextEdit_Hex.clear()
+            
+        # 结束记录
+        else:
+            self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1'))
+            self.ui_main.pushButton_RecordStart.setText('开始')
+            self.ui_main.pushButton_RecordStart.setStyleSheet('background-color:rgb(255, 255, 255)')
+            
     def slot_graphic_slider_pressed(self):
         self.drawing_auto = False
     
@@ -435,7 +491,25 @@ class IndoorLocation(QObject):
         file_w.close()
     
     def slot_open_record(self):
-        pass
+        self.log('点击了打开记录按钮')
+        
+    def slot_open_record_dir(self):
+        print()
+        print('打开记录路径')
+        record_dir = QFileDialog.getExistingDirectory(self.ui_main, "选择记录文件路径", "./") #起始路径
+        self.ui_main.lineEdit_RecordDir.setText(record_dir)
+    
+    def slot_win_set_visibility_changed(self, visable):
+        self.ui_main.action_ViewSet.setChecked(visable)
+    
+    def slot_win_log_visibility_changed(self, visable):
+        self.ui_main.action_ViewLog.setChecked(visable)
+    
+    def slot_win_hex_visibility_changed(self, visable):
+        self.ui_main.action_ViewHex.setChecked(visable)
+    
+    def slot_win_info_visibility_changed(self, visable):
+        self.ui_main.action_ViewInfo.setChecked(visable)
     
     def slot_PortComboBox_showPopup(self):
         self.log('扫描端口')
@@ -447,7 +521,9 @@ class IndoorLocation(QObject):
         port.scan()
         
         if(len(port.valid) > 0):
-            cmb.addItems(port.valid)
+            # cmb.addItems(port.valid)
+            for i in port.valid:
+                cmb.addItem(i.split(' ')[0])
         else:
             cmb.addItem('无可用端口')
         
@@ -459,8 +535,28 @@ class IndoorLocation(QObject):
             cmb.setCurrentIndex(0)
     
     def slot_port_name(self):
-        self.port.name = self.ui_main.comboBox_name.currentText().split(' ')[0]
+        self.port.name = self.ui_main.comboBox_name.currentText()
         self.log('端口 %s' %(self.port.name))
+    
+    def slot_port_name_activated(self):
+        # print('activated')
+        pass
+    def slot_port_name_currentIndexChanged(self, idx):
+        if(len(self.port.valid) > 0):
+            self.log(self.port.valid[idx])
+    def slot_port_name_editTextChanged(self):
+        # print('editTextChanged')
+        pass
+    def slot_port_name_highlighted(self, idx):
+        # print('highlighted id = ', idx)
+        if(len(self.port.valid) > 0):
+            self.log(self.port.valid[idx])
+    def slot_port_name_textActivated(self):
+        # print('textActivated')
+        pass
+    def slot_port_name_textHighlighted(self):
+        # print('textHighlighted')
+        pass
     
     def slot_port_baud(self):
         self.port.baud = int(self.ui_main.comboBox_baud.currentText(), 10)
@@ -515,9 +611,12 @@ class IndoorLocation(QObject):
         
         if(self.port.isopen):
             self.ui_main.pushButton_PortOpenClose.setText('关闭端口')
+            self.ui_main.pushButton_PortOpenClose.setStyleSheet('background-color:gray')
             self.log('端口打开')
         else:
             self.ui_main.pushButton_PortOpenClose.setText('打开端口')
+            self.ui_main.pushButton_PortOpenClose.setStyleSheet('background-color:rgb(240, 240, 240)')
+            # self.ui_main.pushButton_PortOpenClose.setStyleSheet('background-color:#F0F0F0')
             self.log('端口关闭')
     
     def slot_clean_receive(self):
@@ -526,7 +625,6 @@ class IndoorLocation(QObject):
         self.slot_mode_changed()
         
         self.port.read_id = 0
-        self.pkg_byte_id = 0
         
         self.log('清空接收')
     
@@ -593,15 +691,15 @@ class IndoorLocation(QObject):
         
         self.anchors[0].x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
         self.anchors[0].y = float(self.ui_main.tableWidget_DataInfo.item(0, 1).text())
-        self.anchor0.z = float(self.ui_main.tableWidget_DataInfo.item(0, 2).text())
+        self.anchors[0].z = float(self.ui_main.tableWidget_DataInfo.item(0, 2).text())
         
         self.anchors[1].x = float(self.ui_main.tableWidget_DataInfo.item(1, 0).text())
         self.anchors[1].y = float(self.ui_main.tableWidget_DataInfo.item(1, 1).text())
-        self.anchor1.z = float(self.ui_main.tableWidget_DataInfo.item(1, 2).text())
+        self.anchors[1].z = float(self.ui_main.tableWidget_DataInfo.item(1, 2).text())
         
         self.anchors[2].x = float(self.ui_main.tableWidget_DataInfo.item(2, 0).text())
         self.anchors[2].y = float(self.ui_main.tableWidget_DataInfo.item(2, 1).text())
-        self.anchor2.z = float(self.ui_main.tableWidget_DataInfo.item(2, 2).text())
+        self.anchors[2].z = float(self.ui_main.tableWidget_DataInfo.item(2, 2).text())
         
         self.update_2d_matplotlib_limit()
         
@@ -613,124 +711,34 @@ class IndoorLocation(QObject):
         dock_set.setVisible(is_checked)
     
     def receive_port_data(self):
-        if('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
-            self.receive_port_data_WangZeKun()
-            pass
-        
-        elif('DongHan' == self.ui_main.comboBox_Mode.currentText()):
-            if(self.port.isopen):
-                self.receive_port_data_DongHan()
-    
-    def receive_port_data_DongHan(self):
-        port = self.port
-        data_text = self.ui_main.plainTextEdit_Hex
-        
-        if(self.port.isopen):
-            try:
-                if(port.port.in_waiting > 0):           # inWaiting()
-                    new_bytes = port.port.read()
-                    str_new_pkg = new_bytes.hex()
-                    new_bytes_0 = new_bytes[0]
-                    # print(type(new_bytes_0), new_bytes_0)
-                    
-                    self.uart_pkg[self.pkg_byte_id] = new_bytes_0
-                    
-                    if(     ( 0 == self.pkg_byte_id) and (0x6D != self.uart_pkg[self.pkg_byte_id])
-                        or  ( 1 == self.pkg_byte_id) and (0x72 != self.uart_pkg[self.pkg_byte_id])
-                        or  ( 2 == self.pkg_byte_id) and (0x02 != self.uart_pkg[self.pkg_byte_id])
-                        or  ( 3 == self.pkg_byte_id) and (0x00 != self.uart_pkg[self.pkg_byte_id])
-                        or  (14 == self.pkg_byte_id) and (0x0A != self.uart_pkg[self.pkg_byte_id])
-                        or  (15 == self.pkg_byte_id) and (0x0D != self.uart_pkg[self.pkg_byte_id]) ):
-                        self.pkg_byte_id = 0
-                    else:
-                        self.pkg_byte_id += 1
-                        if(self.pkg_byte_id >= 16):
-                            DL = self.uart_pkg[6]
-                            DH = self.uart_pkg[7]
-                            distance = (DH << 8) | DL
-                            self.Anchor0['r'] = distance
-                            
-                            DL = self.uart_pkg[8]
-                            DH = self.uart_pkg[9]
-                            distance = (DH << 8) | DL
-                            self.Anchor1['r'] = distance
-                            
-                            DL = self.uart_pkg[10]
-                            DH = self.uart_pkg[11]
-                            distance = (DH << 8) | DL
-                            self.Anchor2['r'] = distance
-                            
-                            self.log('%s' %('d0: %03d, d1: %03d, d2: %03d' %(self.Anchor0['r'], self.Anchor1['r'], self.Anchor2['r'])))
-                            
-                            self.pkg_byte_id = 0
-                            pass
-                        pass
-                    
-                    # print()
-                    # print(type(new_bytes), new_bytes)
-                    # print(type(str_new_pkg), str_new_pkg)
-                    
-                    # data_text.appendPlainText(str_new_pkg)                # 追加方式会导致每项换行
-                    
-                    data_text.moveCursor(QTextCursor.End)               # 手动在末尾插入
-                    data_text.insertPlainText(str_new_pkg.upper() + ' ')
-            except:
+        if self.port.isopen:
+            if('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
+                self.receive_port_data_WangZeKun()
+            
+            elif('DongHan' == self.ui_main.comboBox_Mode.currentText()):
                 pass
     
     def receive_port_data_WangZeKun(self):
         port = self.port
-        data_text = self.ui_main.plainTextEdit_Hex
+        pkg_info = self.ui_main.plainTextEdit_Hex
         
-        # self.enter_qtimer_stamp = time.perf_counter()           # 测量读取时间间隔 time.perf_counter() 返回浮点数 表示程序持续运行的秒数
-        # self.enter_qtimer_gap = self.enter_qtimer_stamp - self.enter_qtimer_stamp_last
-        # self.enter_qtimer_stamp_last = self.enter_qtimer_stamp
-        rx_cache_len = len(port.rx_cache)
-        
-        # print(  '\r\n % 12.6fs after:%10.3fms rx:%03dB ' %(\
-        #         self.enter_qtimer_stamp,
-        #         (self.enter_qtimer_gap * 1000),
-        #         rx_cache_len),
-        #         end='' )
-        
-        if port.isopen and rx_cache_len<32:
+        if len(port.rx_cache)<32:                                   # 已缓存的数据不足一个包(不做此判断 会在每个 Byte 收到后快速、重复的进入 导致卡顿)
             try:
-                num = port.port.in_waiting
-                
-                if(num > 0):
-                    new_bytes = port.port.read(num)                 # 读取串口接收缓冲区的数据 读到的类型是 bytes
-                    port.rx_cache += new_bytes                      # 添加到串口接收缓存中
-                    rx_cache_len = len(port.rx_cache)
+                num = port.port.in_waiting              
+                if(num > 0):                                        # 有数据待读取
+                    new_bytes = port.port.read(num)                 # 读取接收缓冲区全部数据
+                    port.rx_cache += new_bytes                      # 追加到接收缓存(此处不能用 append 方法)
                     port.read_id += 1                               # read_id 端口打开后第几次读取
                     
-                    self.read_serial_stamp = time.perf_counter()
-                    self.read_serial_gap = self.read_serial_stamp - self.read_serial_stamp_last
-                    self.read_serial_stamp_last = self.read_serial_stamp
-                    
-                    # print(  'after[%10.3f]ms read[%03d]B rx:%03dB ' %(\
-                    #         (self.read_serial_gap * 1000),
-                    #         num,
-                    #         rx_cache_len),
-                    #         end='' )
-                    
-                    while (len(port.rx_cache) >= 32):                 # 至少收到了一个包
-                        if((0xFF == port.rx_cache[0]) and (0x02 == port.rx_cache[1])):
-                            print(port.rx_cache)
-                            self.new_pkg.update(port.rx_cache[0:32])
-                            port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
+                    while (len(port.rx_cache) >= 32):               # 缓存区至少有一个包
+                        if(self.pkg_wzk.update(port.rx_cache[0:32])):           # 尝试按照指定格式提取一个包
+                            port.rx_cache = port.rx_cache[32:]                  # 移除已处理部分
+                            pkg_info.appendPlainText(self.pkg_wzk.info_str)     # 更新显示
                             
-                            data_text.appendPlainText(self.new_pkg.str_record)
-                            
-                            # self.tag.stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                            # self.tag.stamp += ' %12.6f' %(time.perf_counter() - self.stamp_record_start)
-                            # self.tag.raw_data = new_pkg
-                            # self.tag.x = int(np.int16((new_pkg[9]  << 8) | new_pkg[10]))
-                            # self.tag.y = int(np.int16((new_pkg[11] << 8) | new_pkg[12]))
-                            # self.tag.d0 = (new_pkg[13] << 8) | new_pkg[14]
-                            # self.tag.d1 = (new_pkg[15] << 8) | new_pkg[16]
-                            # self.tag.d2 = (new_pkg[17] << 8) | new_pkg[18]
-                            # self.tag.rssi_a0 = int(np.int16((new_pkg[19] << 8) | new_pkg[20])) / -100
-                            # self.tag.rssi_a1 = int(np.int16((new_pkg[21] << 8) | new_pkg[22])) / -100
-                            # self.tag.rssi_a2 = int(np.int16((new_pkg[23] << 8) | new_pkg[24])) / -100
+                            if(self.record.recording):                          # 更新记录缓存
+                                self.record.len += 1
+                                # self.record.record[]
+                                # pass
                             
                             # !!! 这里必须使用 copy 否则缓存的数据总是最后一个包 !!!
                             # ref: https://www.iteye.com/blog/greybeard-1442259
@@ -739,27 +747,11 @@ class IndoorLocation(QObject):
                             
                             if self.drawing_auto:
                                 self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.pkgs))
-                            
-                            # data_text.appendPlainText(pkg.str_pkg)
-                            
-                            
-                            # self.log(   '[% 8.3fs][id:% 8d][+% 4dB = % 4dB] => (% 4d, % 4d) [% 4d, % 4d, % 4d] [% 4dB]'\
-                            #             %(  gap,
-                            #                 port.read_id,
-                            #                 num,
-                            #                 len(port.rx_cache),
-                            #                 self.tag.x,
-                            #                 self.tag.y,
-                            #                 self.Tag['d0'],
-                            #                 self.Tag['d1'],
-                            #                 self.Tag['d2'],
-                            #                 len(port.rx_cache)  )   )
+                                
                         else:
-                            self.log('%s' %(port.rx_cache))
-                            print('finding_header...')
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
             except Exception as e:
-                print('发生异常gzj:')
+                print('串口异常')
                 print(e)
     
     def draw_a_pkg(self, idx):
@@ -835,16 +827,20 @@ class IndoorLocation(QObject):
 
 if __name__ == '__main__':
     app = QApplication([])
-
+    
     idl = IndoorLocation()
     idl.ui_main.show()
 
     timer_SerialRx = QTimer()
     timer_SerialRx.timeout.connect(idl.receive_port_data)
-    timer_SerialRx.start(0)
+    timer_SerialRx.start(1)
 
     timer_UpdateGraphic = QTimer()
     timer_UpdateGraphic.timeout.connect(idl.update_graphic)
     timer_UpdateGraphic.start(100)
 
+    timer_UpdateDynamicUI = QTimer()
+    timer_UpdateDynamicUI.timeout.connect(idl.update_dynamic_ui_500ms)
+    timer_UpdateDynamicUI.start(500)
+    
     sys.exit(app.exec_())

@@ -3,4 +3,5 @@
 模式切换到 WangZeKun
 初始化 Signal Slot
 扫描端口
+COM1 通信端口 (COM1) ACPI\PNP0501\0 
 端口 COM1
