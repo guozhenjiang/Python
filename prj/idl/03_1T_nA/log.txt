@@ -1,5 +1,6 @@
 载入 ./ui_main_1T_nA.ui
 初始化 UI
+刷新: ./record
 模式切换到 WangZeKun
 初始化 Signal Slot
 扫描端口

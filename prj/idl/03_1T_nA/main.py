@@ -1,6 +1,6 @@
 from PySide2 import QtGui, QtWidgets, QtCore
 
-from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog
+from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog
 from PySide2.QtGui import QTextCursor, QTextFormat, QBrush, QColor
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile, QTextStream, QTimer, Signal, Slot
@@ -11,6 +11,7 @@ import time
 import datetime
 import threading
 import sys
+import os
 
 # import pyglet
 
@@ -84,12 +85,18 @@ class Tag():
 
 class Record():
     def __init__(self):
-        self.recording = False
+        self.dir = './record'      # 记录文件保存路径
+        self.recording = False      # 正在记录
+        self.selected = ''          # 被选中要操作的文件
+        
+        self.cache = []
+        
         self.start()
     
     def start(self):
         self.len = 0
         self.record = ''
+        self.cache.clear()
     
 class Pkg_WZK_1T3A():
     '''
@@ -173,7 +180,6 @@ class IndoorLocation(QObject):
     
     drawing_idx = 0
     drawing_auto = True
-    stamp_record_start = 0
     
     def __init__(self):
         self.record = Record()                              # 数据记录
@@ -249,23 +255,24 @@ class IndoorLocation(QObject):
         self.log('初始化 UI')
         ui = self.ui_main
         
-        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\map_128x128.ico'))
-        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_1'))
-        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_2'))
-        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\social_media'))
+        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_1.png'))
+        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_2.png'))
+        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\social_media.png'))
         
-        self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1'))
-        self.ui_main.pushButton_RecordSave.setIcon(QtGui.QPixmap(r'.\ico\save'))
-        self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play'))
-        self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete'))
-        self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir'))
-        self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh'))
+        self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1.png'))
+        self.ui_main.pushButton_RecordSave.setIcon(QtGui.QPixmap(r'.\ico\save.png'))
+        self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play.png'))
+        self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete.png'))
+        self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir.png'))
+        self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh.png'))
         
         ui.comboBox_name_raw.deleteLater()  # 删掉 UI 生成的端口选择下拉框控件
         ui.comboBox_name = PortComboBox()   # 用自己重写的下拉框控件替换被删的
-        # ui.comboBox_name.setMaximumWidth(150)
         
         ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1) # 添加到原来的布局框中相同位置
+        
+        self.slot_record_refresh()          # 更新记录目录下的文件
+        
         
         # 将 Matlabplotlib 2D 图像嵌入界面
         layout = self.ui_main.horizontalLayout_2D_          # <class 'PySide2.QtWidgets.QHBoxLayout'>
@@ -328,24 +335,27 @@ class IndoorLocation(QObject):
         ui.pushButton_StartSend.clicked.connect(                lambda:self.slot_send())
         ui.tableWidget_DataInfo.itemChanged.connect(            lambda:self.slot_tableWidget_Anchor_changed())
         ui.comboBox_Mode.currentTextChanged.connect(            lambda:self.slot_mode_changed())
-        ui.pushButton_RecordStart.clicked.connect(              lambda:self.slot_record_start_stop())
         ui.horizontalSlider_Graphic.sliderPressed.connect(      lambda:self.slot_graphic_slider_pressed())
         ui.horizontalSlider_Graphic.sliderReleased.connect(     lambda:self.slot_graphic_slider_released())
         ui.horizontalSlider_Graphic.valueChanged.connect(       lambda:self.slot_graphic_slider_changed())
         
-        ui.pushButton_RecordSave.clicked.connect(               lambda:self.slot_save_record())
-        ui.pushButton_RecordSave.clicked.connect(               lambda:self.slot_open_record())
+        ui.pushButton_RecordStart.clicked.connect(              lambda:self.slot_record_start_stop())
+        ui.pushButton_RecordSave.clicked.connect(               lambda:self.slot_record_save())
+        ui.pushButton_RecordRefresh.clicked.connect(            lambda:self.slot_record_refresh())
+        ui.pushButton_RecordPlay.clicked.connect(               lambda:self.slot_record_play())
+        ui.pushButton_RecordDelete.clicked.connect(             lambda:self.slot_record_delete())
+        ui.pushButton_RecordDir.clicked.connect(                lambda:self.slot_record_open_dir())
         
-        ui.pushButton_RecordDir.clicked.connect(                lambda:self.slot_open_record_dir())
+        ui.listWidget_RecordFiles.currentTextChanged.connect(   lambda f_name:self.slot_record_select(f_name))
     
     # 更新需要动态显示的 UI
     def update_dynamic_ui_500ms(self):
         self.ui_cnt_recording += 1
         if(self.record.recording):
             if(1 == self.ui_cnt_recording % 2):
-                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_2'))
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_2.png'))
             elif(0 == self.ui_cnt_recording % 2):
-                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1'))
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1.png'))
     
     def draw_ref_line(self):
         x_s = [100, 300, 300, 100, 100]
@@ -435,25 +445,89 @@ class IndoorLocation(QObject):
     def slot_record_start_stop(self):
         self.record.recording = not self.record.recording
         
-        # 开始记录
+        # 记录开始
         if(self.record.recording):
+            self.log('开始记录')
             self.record.start()
             self.ui_main.pushButton_RecordStart.setText('结束')
-            self.ui_main.pushButton_RecordStart.setStyleSheet('background-color:gray')
+            self.ui_main.pushButton_RecordStart.setStatusTip('结束记录')
+            self.ui_main.pushButton_RecordSave.setEnabled(False)
             
-            # self.tags.clear()
             self.drawing_idx = 0
-            self.stamp_record_start = time.perf_counter()
             self.ui_main.horizontalSlider_Graphic.setValue(0)
             self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
             self.ui_main.plainTextEdit_Hex.clear()
             
-        # 结束记录
+        # 记录结束
         else:
-            self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1'))
+            self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1.png'))
             self.ui_main.pushButton_RecordStart.setText('开始')
-            self.ui_main.pushButton_RecordStart.setStyleSheet('background-color:rgb(255, 255, 255)')
+            self.ui_main.pushButton_RecordStart.setStatusTip('开始记录')
             
+            self.log('新纪录 %d 条' %(self.record.len))
+            
+            if self.record.len > 0:
+                self.ui_main.pushButton_RecordSave.setEnabled(True)
+    
+    def slot_record_save(self):
+        save_name = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
+        # 在此弹出对话框 让用户输入记录文件名称中自定义部分
+        f_name_user, ok = QInputDialog.getText(self.ui_main, '文件名-自定义部分', '请输入文件名')
+        
+        if f_name_user != '':                           # 若输入内容不为空 使用空格分开自动前缀和用户输入部分
+            f_name_user = ' ' + f_name_user
+        
+        f_record = self.record.dir + '/' + save_name + f_name_user + '.cvs'
+        self.log('保存: %s' %(f_record))
+        
+        print('\r\n记录缓存:\r\n', self.record.cache)
+        
+        file_w = open(f_record, 'w', newline='')
+        writer = csv.writer(file_w)
+        # writer.writerow([save_name, time.localtime(), 'hello'])
+        writer.writerow([self.ui_main.plainTextEdit_Hex.toPlainText()])
+        file_w.close()
+        self.slot_record_refresh()
+        self.ui_main.pushButton_RecordSave.setEnabled(False)
+        
+    def slot_record_refresh(self):
+        # f_name, f_filter = QFileDialog.getOpenFileName(self.ui_main, '选择单个文件', './', '筛选条件(*.jpg *.png *.bmp)')
+        # print(f_name)
+        
+        # f_names, f_filter = QFileDialog.getOpenFileNames(self.ui_main, '选择单个或多个文件', './', '筛选条件(*.jpg *.png *.bmp)')
+        # print(f_names)
+        
+        self.log('刷新: %s' %(self.record.dir))
+        self.ui_main.lineEdit_RecordDir.setText(self.record.dir)
+        
+        # fs = os.listdir(f_path)                                                                           # 列出路径下所有的文件和文件夹
+        fs = [f for f in os.listdir(self.record.dir) if os.path.isfile(os.path.join(self.record.dir, f))]   # 只列出文件
+        self.ui_main.listWidget_RecordFiles.clear()
+        self.ui_main.listWidget_RecordFiles.addItems(fs)
+        
+        self.ui_main.pushButton_RecordPlay.setEnabled(False)
+        self.ui_main.pushButton_RecordDelete.setEnabled(False)
+        
+    
+    def slot_record_play(self):
+        self.log('回放选中的记录文件')
+    
+    def slot_record_delete(self):
+        self.log('删除: %s' %(self.record.selected))
+        os.remove(self.record.selected)
+        self.slot_record_refresh()
+    
+    def slot_record_open_dir(self):
+        self.record.dir = QFileDialog.getExistingDirectory(self.ui_main, '选择记录文件路径', self.record.dir)
+        self.ui_main.lineEdit_RecordDir.setText(self.record.dir)
+        self.slot_record_refresh()
+    
+    def slot_record_select(self, f_name):
+        self.record.selected = self.record.dir + r'/' + f_name
+        self.log(self.record.selected)
+        self.ui_main.pushButton_RecordPlay.setEnabled(True)
+        self.ui_main.pushButton_RecordDelete.setEnabled(True)
+    
     def slot_graphic_slider_pressed(self):
         self.drawing_auto = False
     
@@ -473,31 +547,6 @@ class IndoorLocation(QObject):
                 self.clear_display_2d_matplotlib()
                 self.draw_a_pkg(idx)
                 self.axes_2d_static.figure.canvas.draw()
-    
-    def slot_save_record(self):
-        save_path = '.\\record\\'
-        save_name = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
-        save_type = '.cvs'
-        save_info = save_path + save_name + save_type
-        # save_info = save_name + save_type
-        print(save_info)
-        
-        file_w = open(save_info, 'w', newline='')
-        writer = csv.writer(file_w)
-        # writer.writerow([save_name, time.localtime(), 'hello'])
-        
-        writer.writerow([self.ui_main.plainTextEdit_Hex.toPlainText()])
-        
-        file_w.close()
-    
-    def slot_open_record(self):
-        self.log('点击了打开记录按钮')
-        
-    def slot_open_record_dir(self):
-        print()
-        print('打开记录路径')
-        record_dir = QFileDialog.getExistingDirectory(self.ui_main, "选择记录文件路径", "./") #起始路径
-        self.ui_main.lineEdit_RecordDir.setText(record_dir)
     
     def slot_win_set_visibility_changed(self, visable):
         self.ui_main.action_ViewSet.setChecked(visable)
@@ -737,8 +786,7 @@ class IndoorLocation(QObject):
                             
                             if(self.record.recording):                          # 更新记录缓存
                                 self.record.len += 1
-                                # self.record.record[]
-                                # pass
+                                self.record.cache.append(self.pkg_wzk.info_str)
                             
                             # !!! 这里必须使用 copy 否则缓存的数据总是最后一个包 !!!
                             # ref: https://www.iteye.com/blog/greybeard-1442259

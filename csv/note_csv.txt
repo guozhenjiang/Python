@@ -1,0 +1,11 @@
+https://docs.python.org/zh-cn/3.9/library/csv.html
+
+// 导入库
+import csv
+
+// 逐行读取
+import csv
+with open('test.csv','rb') as myFile:
+    lines=csv.reader(myFile)
+    for line in lines:
+        print line
