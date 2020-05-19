@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 from PySide2 import QtGui, QtWidgets, QtCore
 
 from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog
@@ -13,31 +16,13 @@ import threading
 import sys
 import os
 
-# import pyglet
-
-# Matplotlib 图像嵌入
 import matplotlib
 from matplotlib.pyplot import *
 from matplotlib.backends.backend_qt5agg import (FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 import numpy as np
 import matplotlib.pyplot as plt
 
-import struct
-import copy
 import csv
-
-
-'''
-    QComboBox
-        https://doc.qt.io/qtforpython/PySide2/QtWidgets/QComboBox.html
-    QFile
-        https://doc.qt.io/qt-5/qfile.html
-    QTextStream
-        https://doc.qt.io/qtforpython/PySide2/QtCore/QTextStream.html
-    QGridLayout
-        https://doc.qt.io/qtforpython/PySide2/QtWidgets/QGridLayout.html
-'''
-
 
 def time_stamp():
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -51,19 +36,28 @@ def time_stamp_ms():
     
     return stamp_ms_str
 
-# 基站
+def dict_to_csv(data_dicts, file):
+    with open(file, 'w', newline='', encoding='utf-8') as f:
+        w = csv.DictWriter(f, data_dicts[0].keys())
+        w.writeheader()
+        
+        if(len(data_dicts) > 1):
+            w.writerows(data_dicts)
+        else:
+            w.writerow(data_dicts[0])
+
 class Anchor():
     def __init__(self, id, x, y, z):
         self.id = id
         self.x = x
         self.y = y
         self.z = z
-    
-    # 显示基站信息
+        
+        self.show()
+        
     def show(self):
         print('A%02d(%+4d, %+4d, %+4d)' %(self.id, self.x, self.y, self.z))
 
-# 标签
 class Tag():
     def __init__(self):
         super().__init__()
@@ -73,94 +67,71 @@ class Tag():
         self.x = 0
         self.y = 0
         self.z = 0
-'''
-    record 1T3A:
-        stamp(2020-05-14 16:30:31.247),
-        tag[(x0, y0, z0)],
-        distance(d0, d1, d2)
-        rssi(r0, r1, r2)
-        pkg( FF 02 ...),
-        anchor[(x0, y0, z0), (x1, y1, z1), (x2, y2, z2)]
-'''
 
 class Record():
     def __init__(self):
-        self.dir = './record'      # 记录文件保存路径
-        self.recording = False      # 正在记录
-        self.selected = ''          # 被选中要操作的文件
-        
-        self.cache = []
-        
+        self.dir = './record'       # 记录文件保存路径
+        self.is_recording = False   # 是否正在记录
+        self.f_path_name = ''       # 被选中要操作的文件(路径+文件名+后缀)
         self.start()
     
     def start(self):
-        self.len = 0
-        self.record = ''
-        self.cache.clear()
+        self.items_list = []        # 以列表方式存储记录信息(记录结束后有可能保存到文件 有可能丢弃)
+        self.item_dict = {}         # 以字典方式存储新的记录项
     
-class Pkg_WZK_1T3A():
+    def stop(self):
+        pass
+    
+    def save(self):
+        pass
+    
+    def push_new_item(self):
+        self.items_list.append(self.item_dict)
+    
+    def len(self):
+        return len(self.items_list)
+    
+class Pkg_1T3A():
     '''
+    Kingfar协议: https://docs.qq.com/sheet/DTExxWE9BZ0draFNY?tab=q9au4t&c=A1A0A0
     00 01 02 03 04 05 06 07 08 09  10  11  12  13   14   15   16   17   18   19        20        21        22        23        24        25 26 27 28 29 30 31
     FF 02 XX XX XX XX XX XX XX x_H x_L y_H y_L d0_H d0_L d1_H d1_L d2_H d2_L rssi_a0_H rssi_a0_L rssi_a1_H rssi_a1_L rssi_a2_H rssi_a2_L XX XX XX XX XX XX XX
-    (x, y)                          标签坐标
-    (d0, d1, d2)                    标签到 3 个基站的距离 单位 cm
-    (rssi_a0, rssi_a1, rssi_a2)     便签到三个基站的信号强度
+    (x, y)          标签坐标
+    (d0, d1, d2)    标签到 3 个基站的距离 单位 cm
+    (r0, r1, r2)    便签到三个基站的信号强度
     '''
+    
     def __init__(self):
-        super().__init__()
-        self.len = 32               # 包长
-        self.anchor_num = 3         # 单个数据包种有多少个基站
-        self.tag_num = 1            # 包中标签个数
-        self.tags = []              # 当前包中的标签信息
-        self.info_str = ''          # 记录到文件的字符串
+        self.init()
         
-        self.info_stamp = ''        # 时间戳
-        self.info_tag = ''          # 标签坐标
-        self.info_distance = ''     # 标签到基站的距离
-        self.info_rssi = ''         # 标签到基站的信号强度
-        self.info_pkg = ''          # 串口收到的数据包
+    def init(self):
+        self.x = 0
+        self.y = 0
+        
+        self.d0 = 0
+        self.d1 = 0
+        self.d2 = 0
+        
+        self.r0 = 0
+        self.r1 = 0
+        self.r2 = 0
+        
+        self.raw = bytes()
     
     def update(self, raw_bytes):
         if (0xFF == raw_bytes[0]) and (0x02 == raw_bytes[1]):
-            # 解析信息值
-            for i in range(self.tag_num):
-                self.tags.append(Tag())
-                self.tags[i].x = int(np.int16((raw_bytes[9 + 4*i + 0]  << 8) | raw_bytes[9 + 4*i + 1]))
-                self.tags[i].y = int(np.int16((raw_bytes[9 + 4*i + 2]  << 8) | raw_bytes[9 + 4*i + 3]))
-                
-                for j in range(self.anchor_num):
-                    self.tags[i].d.append((raw_bytes[13 + 2*j + 0] << 8) | raw_bytes[13 + 2*j + 1])
-                    self.tags[i].r.append(int(np.int16((raw_bytes[19 + 2*j + 0] << 8) | raw_bytes[19 + 2*j + 1])) / 100)
+            self.x = int(np.int16((raw_bytes[ 9]  << 8) | raw_bytes[10]))
+            self.y = int(np.int16((raw_bytes[11]  << 8) | raw_bytes[12]))
             
-            # 更新信息字符串
-            self.info_stamp = time_stamp_ms()
+            self.d0 =             (raw_bytes[13]  << 8) | raw_bytes[14]
+            self.d1 =             (raw_bytes[15]  << 8) | raw_bytes[16]
+            self.d2 =             (raw_bytes[17]  << 8) | raw_bytes[18]
             
-            for i in range(self.tag_num):
-                # 坐标
-                self.info_tag = ' T(%4d, %4d)' %(self.tags[i].x, self.tags[i].y)
-                
-                # 距离
-                self.info_distance = ' D('
-                for j in range(self.anchor_num):
-                    self.info_distance += '%3d' %(self.tags[i].d[j])
-                    if j != self.anchor_num-1:
-                        self.info_distance += ', '
-                self.info_distance += ')'
-                
-                # 信号强度
-                self.info_rssi = ' R('
-                for j in range(self.anchor_num):
-                    self.info_rssi += '%3d' %(self.tags[i].r[j])
-                    if j != self.anchor_num-1:
-                        self.info_rssi += ', '
-                self.info_rssi += ')'
-                
-            # 原始包
-            self.info_pkg = ''
-            for b in  raw_bytes:
-                self.info_pkg += ' %02X' %(b)
+            self.r0 = int(np.int16((raw_bytes[19]  << 8) | raw_bytes[20]))
+            self.r1 = int(np.int16((raw_bytes[21]  << 8) | raw_bytes[11]))
+            self.r2 = int(np.int16((raw_bytes[23]  << 8) | raw_bytes[24]))
             
-            self.info_str = self.info_stamp + self.info_tag + self.info_distance + self.info_rssi + self.info_pkg
+            self.raw = raw_bytes
             
             return True
         else:
@@ -172,10 +143,7 @@ class IndoorLocation(QObject):
     anchors.append(Anchor(1, 0, 200, 0))
     anchors.append(Anchor(2, 200, 0, 0))
     
-    for anchor in anchors:
-        anchor.show()
-    
-    pkg_wzk = Pkg_WZK_1T3A()
+    pkg_1T3A = Pkg_1T3A()
     pkgs = []
     
     drawing_idx = 0
@@ -351,7 +319,7 @@ class IndoorLocation(QObject):
     # 更新需要动态显示的 UI
     def update_dynamic_ui_500ms(self):
         self.ui_cnt_recording += 1
-        if(self.record.recording):
+        if(self.record.is_recording):
             if(1 == self.ui_cnt_recording % 2):
                 self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_2.png'))
             elif(0 == self.ui_cnt_recording % 2):
@@ -443,10 +411,10 @@ class IndoorLocation(QObject):
             pass
     
     def slot_record_start_stop(self):
-        self.record.recording = not self.record.recording
+        self.record.is_recording = not self.record.is_recording
         
         # 记录开始
-        if(self.record.recording):
+        if(self.record.is_recording):
             self.log('开始记录')
             self.record.start()
             self.ui_main.pushButton_RecordStart.setText('结束')
@@ -460,33 +428,32 @@ class IndoorLocation(QObject):
             
         # 记录结束
         else:
+            self.record.stop()
+            
             self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1.png'))
             self.ui_main.pushButton_RecordStart.setText('开始')
             self.ui_main.pushButton_RecordStart.setStatusTip('开始记录')
             
-            self.log('新纪录 %d 条' %(self.record.len))
+            len = self.record.len()
+            self.log('新纪录 %d 条' %(len))
             
-            if self.record.len > 0:
+            if len > 0:
                 self.ui_main.pushButton_RecordSave.setEnabled(True)
     
     def slot_record_save(self):
         save_name = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
+        
         # 在此弹出对话框 让用户输入记录文件名称中自定义部分
         f_name_user, ok = QInputDialog.getText(self.ui_main, '文件名-自定义部分', '请输入文件名')
         
         if f_name_user != '':                           # 若输入内容不为空 使用空格分开自动前缀和用户输入部分
             f_name_user = ' ' + f_name_user
         
-        f_record = self.record.dir + '/' + save_name + f_name_user + '.cvs'
+        f_record = self.record.dir + '/' + save_name + f_name_user + '.csv'
         self.log('保存: %s' %(f_record))
         
-        print('\r\n记录缓存:\r\n', self.record.cache)
+        dict_to_csv(self.record.items_list, f_record)
         
-        file_w = open(f_record, 'w', newline='')
-        writer = csv.writer(file_w)
-        # writer.writerow([save_name, time.localtime(), 'hello'])
-        writer.writerow([self.ui_main.plainTextEdit_Hex.toPlainText()])
-        file_w.close()
         self.slot_record_refresh()
         self.ui_main.pushButton_RecordSave.setEnabled(False)
         
@@ -513,8 +480,8 @@ class IndoorLocation(QObject):
         self.log('回放选中的记录文件')
     
     def slot_record_delete(self):
-        self.log('删除: %s' %(self.record.selected))
-        os.remove(self.record.selected)
+        self.log('删除: %s' %(self.record.f_path_name))
+        os.remove(self.record.f_path_name)
         self.slot_record_refresh()
     
     def slot_record_open_dir(self):
@@ -523,8 +490,8 @@ class IndoorLocation(QObject):
         self.slot_record_refresh()
     
     def slot_record_select(self, f_name):
-        self.record.selected = self.record.dir + r'/' + f_name
-        self.log(self.record.selected)
+        self.record.f_path_name = self.record.dir + r'/' + f_name
+        self.log(self.record.f_path_name)
         self.ui_main.pushButton_RecordPlay.setEnabled(True)
         self.ui_main.pushButton_RecordDelete.setEnabled(True)
     
@@ -689,7 +656,7 @@ class IndoorLocation(QObject):
             send_bytes = bytes.fromhex(send_str)
             # print(send_bytes)
             # self.log(send_str)
-            self.log('即将发送 %s' %(send_bytes))
+            self.log('发送:\r\n %s' %(send_bytes))
             self.port.port.write(send_bytes)
             pass
         else:
@@ -780,19 +747,31 @@ class IndoorLocation(QObject):
                     port.read_id += 1                               # read_id 端口打开后第几次读取
                     
                     while (len(port.rx_cache) >= 32):               # 缓存区至少有一个包
-                        if(self.pkg_wzk.update(port.rx_cache[0:32])):           # 尝试按照指定格式提取一个包
+                        if(self.pkg_1T3A.update(port.rx_cache[0:32])):           # 尝试按照指定格式提取一个包
                             port.rx_cache = port.rx_cache[32:]                  # 移除已处理部分
-                            pkg_info.appendPlainText(self.pkg_wzk.info_str)     # 更新显示
                             
-                            if(self.record.recording):                          # 更新记录缓存
-                                self.record.len += 1
-                                self.record.cache.append(self.pkg_wzk.info_str)
+                            pkg_info.appendPlainText(time_stamp_ms())           # 更新显示
                             
-                            # !!! 这里必须使用 copy 否则缓存的数据总是最后一个包 !!!
-                            # ref: https://www.iteye.com/blog/greybeard-1442259
-                            # self.tags.append(copy.copy(self.tag))
-                            # self.tags.append(copy.deepcopy(self.tag))
-                            
+                            if(self.record.is_recording):                           # 更新记录缓存
+                                self.record.item_dict['stamp'] = time_stamp_ms()
+                                self.record.item_dict['x'] = self.pkg_1T3A.x
+                                self.record.item_dict['y'] = self.pkg_1T3A.y
+                                self.record.item_dict['d0'] = self.pkg_1T3A.d0
+                                self.record.item_dict['d1'] = self.pkg_1T3A.d1
+                                self.record.item_dict['d2'] = self.pkg_1T3A.d2
+                                self.record.item_dict['r0'] = self.pkg_1T3A.r0
+                                self.record.item_dict['r1'] = self.pkg_1T3A.r1
+                                self.record.item_dict['r2'] = self.pkg_1T3A.r2
+                                self.record.item_dict['raw'] = self.pkg_1T3A.raw
+                                self.record.item_dict['a0_x'] = self.anchors[0].x
+                                self.record.item_dict['a0_y'] = self.anchors[0].y
+                                self.record.item_dict['a1_x'] = self.anchors[1].x
+                                self.record.item_dict['a1_y'] = self.anchors[1].y
+                                self.record.item_dict['a2_x'] = self.anchors[2].x
+                                self.record.item_dict['a2_y'] = self.anchors[2].y
+                                
+                                self.record.push_new_item()
+                                
                             if self.drawing_auto:
                                 self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.pkgs))
                                 
