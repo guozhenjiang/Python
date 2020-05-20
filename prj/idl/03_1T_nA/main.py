@@ -3,10 +3,10 @@
 
 from PySide2 import QtGui, QtWidgets, QtCore
 
-from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog
+from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog, QScrollBar
 from PySide2.QtGui import QTextCursor, QTextFormat, QBrush, QColor
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtCore import QFile, QTextStream, QTimer, Signal, Slot
+from PySide2.QtCore import QFile, QTextStream, QTimer, Signal, Slot, Qt
 from lib_comport import *
 from lib_comport_ComboBox import *
 
@@ -15,6 +15,7 @@ import datetime
 import threading
 import sys
 import os
+import copy
 
 import matplotlib
 from matplotlib.pyplot import *
@@ -86,7 +87,7 @@ class Record():
         pass
     
     def push_new_item(self):
-        self.items_list.append(self.item_dict)
+        self.items_list.append(copy.copy(self.item_dict))
     
     def len(self):
         return len(self.items_list)
@@ -137,6 +138,17 @@ class Pkg_1T3A():
         else:
             return False
 
+class CustomQScrollBar(QScrollBar):
+    def __init__(self, parent = None):
+        super(CustomQScrollBar, self).__init__(parent)
+    
+    def wheelEvent(self, QWheelEvent):
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.ControlModifier:
+            print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+            print('Ctrl + Wheel', QWheelEvent.delta())
+    
+
 class IndoorLocation(QObject):
     anchors = []
     anchors.append(Anchor(0, 0, 0, 200))
@@ -171,7 +183,7 @@ class IndoorLocation(QObject):
         # 初始化
         self.init_ui()
         
-        original_size = self.ui_main.dockWidget_Hex.size()
+        original_size = self.ui_main.dockWidget_Pkg.size()
         # print()
         # print('************************')
         # print(type(original_size))
@@ -180,7 +192,7 @@ class IndoorLocation(QObject):
         # print('************************')
         # print()
         
-        self.ui_main.dockWidget_Hex.resize(100, original_size.height())     # resize 对 DockWidget 无效
+        self.ui_main.dockWidget_Pkg.resize(100, original_size.height())     # resize 对 DockWidget 无效
         
         for i in range(len(self.anchors)):
             self.ui_main.tableWidget_DataInfo.setItem(i, 0, QTableWidgetItem(str(self.anchors[i].x)))
@@ -223,24 +235,27 @@ class IndoorLocation(QObject):
         self.log('初始化 UI')
         ui = self.ui_main
         
-        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_1.png'))
-        # self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_2.png'))
-        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\social_media.png'))
+        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_256x256.png'))
         
-        self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1.png'))
-        self.ui_main.pushButton_RecordSave.setIcon(QtGui.QPixmap(r'.\ico\save.png'))
-        self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play.png'))
-        self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete.png'))
-        self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir.png'))
-        self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh.png'))
+        self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_128x128_red_dot.png'))
+        self.ui_main.pushButton_RecordSave.setIcon(QtGui.QPixmap(r'.\ico\save_256x256.png'))
+        self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play_256x256.png'))
+        self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_128x128.png'))
+        self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
+        self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))
         
-        ui.comboBox_name_raw.deleteLater()  # 删掉 UI 生成的端口选择下拉框控件
-        ui.comboBox_name = PortComboBox()   # 用自己重写的下拉框控件替换被删的
-        
+        ui.comboBox_name_raw.deleteLater()                  # 删掉 UI 生成的端口选择下拉框控件
+        ui.comboBox_name = PortComboBox()                   # 用自己重写的控件替换被删的
         ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1) # 添加到原来的布局框中相同位置
         
-        self.slot_record_refresh()          # 更新记录目录下的文件
+        ui.horizontalScrollBar_GraphicRaw.deleteLater()     # 删掉 UI 生成的图像显示滑块
+        ui.horizontalScrollBar_Graphic = CustomQScrollBar(Qt.Horizontal) # 用自己重写的控件替换被删的
+        self.scrollbar_graphic_init()
+        ui.horizontalScrollBar_Graphic.setPageStep(1)
+        ui.horizontalScrollBar_Graphic.setSingleStep(1)
+        ui.verticalLayout_2D_Matplotlib.addWidget(ui.horizontalScrollBar_Graphic)
         
+        self.slot_record_refresh()          # 更新记录目录下的文件
         
         # 将 Matlabplotlib 2D 图像嵌入界面
         layout = self.ui_main.horizontalLayout_2D_          # <class 'PySide2.QtWidgets.QHBoxLayout'>
@@ -267,18 +282,23 @@ class IndoorLocation(QObject):
         
         self.slot_mode_changed()
     
+    def scrollbar_graphic_init(self):
+        self.ui_main.horizontalScrollBar_Graphic.setValue(0)
+        self.ui_main.horizontalScrollBar_Graphic.setMinimum(0)
+        self.ui_main.horizontalScrollBar_Graphic.setMaximum(0)
+    
     def init_signal_slot(self):
         self.log('初始化 Signal Slot')
         ui = self.ui_main
         
         ui.action_ViewSet.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
         ui.action_ViewLog.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
-        ui.action_ViewHex.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Hex, ui.action_ViewHex.isChecked()))
+        ui.action_ViewHex.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Pkg, ui.action_ViewHex.isChecked()))
         ui.action_ViewInfo.changed.connect( lambda:self.slot_dock_show_hide(ui.dockWidget_Info, ui.action_ViewInfo.isChecked()))
         
         ui.dockWidget_Set.visibilityChanged.connect(    lambda visable:self.slot_win_set_visibility_changed(visable))
         ui.dockWidget_Log.visibilityChanged.connect(    lambda visable:self.slot_win_log_visibility_changed(visable))
-        ui.dockWidget_Hex.visibilityChanged.connect(    lambda visable:self.slot_win_hex_visibility_changed(visable))
+        ui.dockWidget_Pkg.visibilityChanged.connect(    lambda visable:self.slot_win_hex_visibility_changed(visable))
         ui.dockWidget_Info.visibilityChanged.connect(   lambda visable:self.slot_win_info_visibility_changed(visable))
         
         ui.comboBox_name.signal_PortComboBox_showPopup.connect(self.slot_PortComboBox_showPopup)
@@ -321,9 +341,9 @@ class IndoorLocation(QObject):
         self.ui_cnt_recording += 1
         if(self.record.is_recording):
             if(1 == self.ui_cnt_recording % 2):
-                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_2.png'))
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_green.png'))
             elif(0 == self.ui_cnt_recording % 2):
-                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1.png'))
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_red.png'))
     
     def draw_ref_line(self):
         x_s = [100, 300, 300, 100, 100]
@@ -420,6 +440,8 @@ class IndoorLocation(QObject):
             self.ui_main.pushButton_RecordStart.setText('结束')
             self.ui_main.pushButton_RecordStart.setStatusTip('结束记录')
             self.ui_main.pushButton_RecordSave.setEnabled(False)
+            self.update_dynamic_ui_500ms()
+            self.scrollbar_graphic_init()
             
             self.drawing_idx = 0
             self.ui_main.horizontalSlider_Graphic.setValue(0)
@@ -430,7 +452,7 @@ class IndoorLocation(QObject):
         else:
             self.record.stop()
             
-            self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_1.png'))
+            self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_128x128_red_dot.png'))
             self.ui_main.pushButton_RecordStart.setText('开始')
             self.ui_main.pushButton_RecordStart.setStatusTip('开始记录')
             
@@ -552,7 +574,7 @@ class IndoorLocation(QObject):
     
     def slot_port_name(self):
         self.port.name = self.ui_main.comboBox_name.currentText()
-        self.log('端口 %s' %(self.port.name))
+        # self.log('端口 %s' %(self.port.name))
     
     def slot_port_name_activated(self):
         # print('activated')
@@ -734,9 +756,28 @@ class IndoorLocation(QObject):
             elif('DongHan' == self.ui_main.comboBox_Mode.currentText()):
                 pass
     
+    def update_uart_pkg_text_info(self, item_dict):
+        pkg_stamp = item_dict['stamp']
+        
+        pkg_info = ' T(%d, %d)' %(item_dict['x'], item_dict['y'])
+        pkg_info += ' D(%d, %d, %d)' %(item_dict['d0'], item_dict['d1'], item_dict['d2'])
+        pkg_info += ' R(%d, %d, %d)' %(item_dict['r0'], item_dict['r1'], item_dict['r2'])
+        
+        pkg_raw = ''
+        for v in item_dict['raw']:
+            pkg_raw += ' %02X' %(v)
+        
+        pkg_str = pkg_stamp + pkg_info + pkg_raw
+        self.ui_main.plainTextEdit_Hex.appendPlainText(pkg_str)
+        self.ui_main.lineEdit_PkgRaw.setText(pkg_stamp + pkg_raw)
+        self.ui_main.lineEdit_PkgInfo.setText(pkg_info)
+    
+    def update_uart_pkg_graphic_scrollbar(self, items_list):
+        num = len(items_list)
+        self.ui_main.horizontalScrollBar_Graphic.setMaximum(num)
+    
     def receive_port_data_WangZeKun(self):
         port = self.port
-        pkg_info = self.ui_main.plainTextEdit_Hex
         
         if len(port.rx_cache)<32:                                   # 已缓存的数据不足一个包(不做此判断 会在每个 Byte 收到后快速、重复的进入 导致卡顿)
             try:
@@ -746,34 +787,35 @@ class IndoorLocation(QObject):
                     port.rx_cache += new_bytes                      # 追加到接收缓存(此处不能用 append 方法)
                     port.read_id += 1                               # read_id 端口打开后第几次读取
                     
-                    while (len(port.rx_cache) >= 32):               # 缓存区至少有一个包
-                        if(self.pkg_1T3A.update(port.rx_cache[0:32])):           # 尝试按照指定格式提取一个包
-                            port.rx_cache = port.rx_cache[32:]                  # 移除已处理部分
+                    while (len(port.rx_cache) >= 32):                               # 缓存区至少有一个包
+                        if(self.pkg_1T3A.update(port.rx_cache[0:32])):              # 尝试按照指定格式提取一个包
+                            port.rx_cache = port.rx_cache[32:]                      # 移除已处理部分
+                        
+                            self.record.item_dict['stamp'] = time_stamp_ms()
+                            self.record.item_dict['x'] = self.pkg_1T3A.x
+                            self.record.item_dict['y'] = self.pkg_1T3A.y
+                            self.record.item_dict['d0'] = self.pkg_1T3A.d0
+                            self.record.item_dict['d1'] = self.pkg_1T3A.d1
+                            self.record.item_dict['d2'] = self.pkg_1T3A.d2
+                            self.record.item_dict['r0'] = self.pkg_1T3A.r0
+                            self.record.item_dict['r1'] = self.pkg_1T3A.r1
+                            self.record.item_dict['r2'] = self.pkg_1T3A.r2
+                            self.record.item_dict['a0.x'] = self.anchors[0].x
+                            self.record.item_dict['a0.y'] = self.anchors[0].y
+                            self.record.item_dict['a1.x'] = self.anchors[1].x
+                            self.record.item_dict['a1.y'] = self.anchors[1].y
+                            self.record.item_dict['a2.x'] = self.anchors[2].x
+                            self.record.item_dict['a2.y'] = self.anchors[2].y
+                            self.record.item_dict['raw'] = self.pkg_1T3A.raw
                             
-                            pkg_info.appendPlainText(time_stamp_ms())           # 更新显示
+                            self.update_uart_pkg_text_info(self.record.item_dict)   # self.update_uart_pkg_text_info(copy.copy(self.record.item_dict))
                             
                             if(self.record.is_recording):                           # 更新记录缓存
-                                self.record.item_dict['stamp'] = time_stamp_ms()
-                                self.record.item_dict['x'] = self.pkg_1T3A.x
-                                self.record.item_dict['y'] = self.pkg_1T3A.y
-                                self.record.item_dict['d0'] = self.pkg_1T3A.d0
-                                self.record.item_dict['d1'] = self.pkg_1T3A.d1
-                                self.record.item_dict['d2'] = self.pkg_1T3A.d2
-                                self.record.item_dict['r0'] = self.pkg_1T3A.r0
-                                self.record.item_dict['r1'] = self.pkg_1T3A.r1
-                                self.record.item_dict['r2'] = self.pkg_1T3A.r2
-                                self.record.item_dict['raw'] = self.pkg_1T3A.raw
-                                self.record.item_dict['a0_x'] = self.anchors[0].x
-                                self.record.item_dict['a0_y'] = self.anchors[0].y
-                                self.record.item_dict['a1_x'] = self.anchors[1].x
-                                self.record.item_dict['a1_y'] = self.anchors[1].y
-                                self.record.item_dict['a2_x'] = self.anchors[2].x
-                                self.record.item_dict['a2_y'] = self.anchors[2].y
-                                
                                 self.record.push_new_item()
+                                self.update_uart_pkg_graphic_scrollbar(self.record.items_list)
                                 
-                            if self.drawing_auto:
-                                self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.pkgs))
+                            # if self.drawing_auto:
+                            #     self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.pkgs))
                                 
                         else:
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头

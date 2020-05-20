@@ -108,35 +108,104 @@
        <attribute name="title">
         <string>2D_Matplotlib</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_9">
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2D_"/>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEdit_PkgRaw">
-          <property name="placeholderText">
-           <string>RAW</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEdit_PkgInfo">
-          <property name="placeholderText">
-           <string>Info</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSlider" name="horizontalSlider_Graphic">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="tickPosition">
-           <enum>QSlider::TicksAbove</enum>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <widget class="QWidget" name="">
+        <property name="geometry">
+         <rect>
+          <x>9</x>
+          <y>9</y>
+          <width>311</width>
+          <height>401</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2D_Matplotlib">
+         <property name="spacing">
+          <number>2</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_StartReport">
+           <property name="spacing">
+            <number>2</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="pushButton_StartSend">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>60</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>开始上报</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit_StartSend">
+             <property name="text">
+              <string>FF 02 00 00 00 00 00 00</string>
+             </property>
+             <property name="placeholderText">
+              <string>Hex</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_2D_">
+           <property name="spacing">
+            <number>2</number>
+           </property>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_PkgRaw">
+           <property name="placeholderText">
+            <string>RAW</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_PkgInfo">
+           <property name="placeholderText">
+            <string>Info</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSlider" name="horizontalSlider_Graphic">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 0, 0);</string>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="tickPosition">
+            <enum>QSlider::TicksAbove</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QScrollBar" name="horizontalScrollBar_GraphicRaw">
+           <property name="focusPolicy">
+            <enum>Qt::StrongFocus</enum>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 0, 0);</string>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
       <widget class="QWidget" name="tab_3D_Matplotlib">
        <attribute name="title">
@@ -174,33 +243,6 @@
        </layout>
       </widget>
      </widget>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_5">
-      <item>
-       <widget class="QPushButton" name="pushButton_StartSend">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>开始上报</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="lineEdit_StartSend">
-        <property name="text">
-         <string>FF 02 00 00 00 00 00 00</string>
-        </property>
-        <property name="placeholderText">
-         <string>Hex</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </item>
    </layout>
   </widget>
@@ -249,6 +291,12 @@ border-width: 1px</string>
        </property>
        <property name="horizontalScrollBarPolicy">
         <enum>Qt::ScrollBarAsNeeded</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="lineWrapMode">
+        <enum>QPlainTextEdit::NoWrap</enum>
        </property>
        <property name="plainText">
         <string/>
@@ -735,7 +783,7 @@ border-width: 1px</string>
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_Hex">
+  <widget class="QDockWidget" name="dockWidget_Pkg">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
      <horstretch>0</horstretch>
@@ -752,7 +800,7 @@ border-width: 1px</string>
     <set>QDockWidget::AllDockWidgetFeatures</set>
    </property>
    <property name="windowTitle">
-    <string>Hex</string>
+    <string>数据包</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -809,7 +857,7 @@ border-width: 1px</string>
     </sizepolicy>
    </property>
    <property name="windowTitle">
-    <string>Info</string>
+    <string>数据记录</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
