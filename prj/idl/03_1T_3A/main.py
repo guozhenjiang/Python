@@ -1,9 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# region import
 from PySide2 import QtGui, QtWidgets, QtCore
 
-from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog, QScrollBar
+from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog, QScrollBar, QLabel
 from PySide2.QtGui import QTextCursor, QTextFormat, QBrush, QColor
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile, QTextStream, QTimer, Signal, Slot, Qt
@@ -24,7 +25,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import csv
+# endregion
 
+# region 基本公共方法
 def time_stamp():
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
@@ -46,6 +49,7 @@ def dict_to_csv(data_dicts, file):
             w.writerows(data_dicts)
         else:
             w.writerow(data_dicts[0])
+#endregion
 
 class Anchor():
     def __init__(self, id, x, y, z):
@@ -139,24 +143,38 @@ class Pkg_1T3A():
             return False
 
 class CustomQScrollBar(QScrollBar):
+    signal_scrollbar_ctrl_wheel = Signal(int)
+    
     def __init__(self, parent = None):
         super(CustomQScrollBar, self).__init__(parent)
     
-    def wheelEvent(self, QWheelEvent):
+    def keyPressEvent(self, key):
         modifiers = QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.ControlModifier:
             print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-            print('Ctrl + Wheel', QWheelEvent.delta())
+            print('Ctrl 按下')
     
-
+    def wheelEvent(self, event):
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.ControlModifier:
+            print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+            print('Ctrl + Wheel:', event.delta())
+            
+            self.signal_scrollbar_ctrl_wheel.emit(event.delta() / 120)
+            
+        if modifiers == QtCore.Qt.ShiftModifier:
+            print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+            print('Shift + Wheel:', event.delta())
+            
 class IndoorLocation(QObject):
+    # region 基站
     anchors = []
     anchors.append(Anchor(0, 0, 0, 200))
     anchors.append(Anchor(1, 0, 200, 0))
     anchors.append(Anchor(2, 200, 0, 0))
+    # endregion
     
-    pkg_1T3A = Pkg_1T3A()
-    pkgs = []
+    new_pkg = Pkg_1T3A()
     
     drawing_idx = 0
     drawing_auto = True
@@ -255,6 +273,25 @@ class IndoorLocation(QObject):
         ui.horizontalScrollBar_Graphic.setSingleStep(1)
         ui.verticalLayout_2D_Matplotlib.addWidget(ui.horizontalScrollBar_Graphic)
         
+        # 加入3 个 label
+        # label_min = QLabel('min')
+        # ui.verticalLayout_2D_Matplotlib.addWidget(label_min)
+        
+        ui.label_min = QLabel('min')
+        ui.label_pagestep = QLabel('page_step')
+        ui.label_max = QLabel('max')
+        ui.label_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(ui.label_min)
+        layout.addItem(QtWidgets.QSpacerItem(10, 5, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding))
+        layout.addWidget(ui.label_pagestep)
+        layout.addItem(QtWidgets.QSpacerItem(10, 5, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding))
+        layout.addWidget(ui.label_max)
+        
+        ui.verticalLayout_2D_Matplotlib.addItem(layout)
+        ui.tab_2D_Matplotlib.setLayout(ui.verticalLayout_2D_Matplotlib)
+        
         self.slot_record_refresh()          # 更新记录目录下的文件
         
         # 将 Matlabplotlib 2D 图像嵌入界面
@@ -291,50 +328,59 @@ class IndoorLocation(QObject):
         self.log('初始化 Signal Slot')
         ui = self.ui_main
         
-        ui.action_ViewSet.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
-        ui.action_ViewLog.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
-        ui.action_ViewHex.changed.connect(  lambda:self.slot_dock_show_hide(ui.dockWidget_Pkg, ui.action_ViewHex.isChecked()))
-        ui.action_ViewInfo.changed.connect( lambda:self.slot_dock_show_hide(ui.dockWidget_Info, ui.action_ViewInfo.isChecked()))
+        ui.action_ViewSet.changed.connect(                                  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
+        ui.action_ViewLog.changed.connect(                                  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
+        ui.action_ViewHex.changed.connect(                                  lambda:self.slot_dock_show_hide(ui.dockWidget_Pkg, ui.action_ViewHex.isChecked()))
+        ui.action_ViewInfo.changed.connect(                                 lambda:self.slot_dock_show_hide(ui.dockWidget_Info, ui.action_ViewInfo.isChecked()))
         
-        ui.dockWidget_Set.visibilityChanged.connect(    lambda visable:self.slot_win_set_visibility_changed(visable))
-        ui.dockWidget_Log.visibilityChanged.connect(    lambda visable:self.slot_win_log_visibility_changed(visable))
-        ui.dockWidget_Pkg.visibilityChanged.connect(    lambda visable:self.slot_win_hex_visibility_changed(visable))
-        ui.dockWidget_Info.visibilityChanged.connect(   lambda visable:self.slot_win_info_visibility_changed(visable))
+        ui.dockWidget_Set.visibilityChanged.connect(                        lambda visable:self.slot_win_set_visibility_changed(visable))
+        ui.dockWidget_Log.visibilityChanged.connect(                        lambda visable:self.slot_win_log_visibility_changed(visable))
+        ui.dockWidget_Pkg.visibilityChanged.connect(                        lambda visable:self.slot_win_hex_visibility_changed(visable))
+        ui.dockWidget_Info.visibilityChanged.connect(                       lambda visable:self.slot_win_info_visibility_changed(visable))
         
-        ui.comboBox_name.signal_PortComboBox_showPopup.connect(self.slot_PortComboBox_showPopup)
-        ui.comboBox_name.currentTextChanged.connect(    lambda:self.slot_port_name())
+        ui.comboBox_name.signal_PortComboBox_showPopup.connect(             lambda:self.slot_PortComboBox_showPopup())
+        ui.comboBox_name.currentTextChanged.connect(                        lambda:self.slot_port_name())
         
-        ui.comboBox_name.activated.connect(             lambda:self.slot_port_name_activated())
-        ui.comboBox_name.currentIndexChanged.connect(   lambda idx:self.slot_port_name_currentIndexChanged(idx))
-        ui.comboBox_name.editTextChanged.connect(       lambda:self.slot_port_name_editTextChanged())
-        ui.comboBox_name.highlighted.connect(           lambda idx:self.slot_port_name_highlighted(idx))
-        ui.comboBox_name.textActivated.connect(         lambda:self.slot_port_name_textActivated())
-        ui.comboBox_name.textHighlighted.connect(       lambda:self.slot_port_name_textHighlighted())
+        ui.comboBox_name.activated.connect(                                 lambda:self.slot_port_name_activated())
+        ui.comboBox_name.currentIndexChanged.connect(                       lambda idx:self.slot_port_name_currentIndexChanged(idx))
+        ui.comboBox_name.editTextChanged.connect(                           lambda:self.slot_port_name_editTextChanged())
+        ui.comboBox_name.highlighted.connect(                               lambda idx:self.slot_port_name_highlighted(idx))
+        ui.comboBox_name.textActivated.connect(                             lambda:self.slot_port_name_textActivated())
+        ui.comboBox_name.textHighlighted.connect(                           lambda:self.slot_port_name_textHighlighted())
         
-        ui.comboBox_baud.currentTextChanged.connect(            lambda:self.slot_port_baud())
-        ui.comboBox_byte.currentTextChanged.connect(            lambda:self.slot_port_byte())
-        ui.comboBox_parity.currentTextChanged.connect(          lambda:self.slot_port_parity())
-        ui.comboBox_stop.currentTextChanged.connect(            lambda:self.slot_port_stop())
-        ui.checkBox_xonxoff.stateChanged.connect(               lambda:self.slot_port_xonxoff())
-        ui.checkBox_rtscts.stateChanged.connect(                lambda:self.slot_port_rtscts())
-        ui.checkBox_dsrdtr.stateChanged.connect(                lambda:self.slot_port_dsrdtr())
-        ui.pushButton_PortOpenClose.clicked.connect(            lambda:self.slot_port_open_close())
-        ui.pushButton_CleanReceive.clicked.connect(             lambda:self.slot_clean_receive())
-        ui.pushButton_StartSend.clicked.connect(                lambda:self.slot_send())
-        ui.tableWidget_DataInfo.itemChanged.connect(            lambda:self.slot_tableWidget_Anchor_changed())
-        ui.comboBox_Mode.currentTextChanged.connect(            lambda:self.slot_mode_changed())
-        ui.horizontalSlider_Graphic.sliderPressed.connect(      lambda:self.slot_graphic_slider_pressed())
-        ui.horizontalSlider_Graphic.sliderReleased.connect(     lambda:self.slot_graphic_slider_released())
-        ui.horizontalSlider_Graphic.valueChanged.connect(       lambda:self.slot_graphic_slider_changed())
+        ui.comboBox_baud.currentTextChanged.connect(                        lambda:self.slot_port_baud())
+        ui.comboBox_byte.currentTextChanged.connect(                        lambda:self.slot_port_byte())
+        ui.comboBox_parity.currentTextChanged.connect(                      lambda:self.slot_port_parity())
+        ui.comboBox_stop.currentTextChanged.connect(                        lambda:self.slot_port_stop())
+        ui.checkBox_xonxoff.stateChanged.connect(                           lambda:self.slot_port_xonxoff())
+        ui.checkBox_rtscts.stateChanged.connect(                            lambda:self.slot_port_rtscts())
+        ui.checkBox_dsrdtr.stateChanged.connect(                            lambda:self.slot_port_dsrdtr())
+        ui.pushButton_PortOpenClose.clicked.connect(                        lambda:self.slot_port_open_close())
+        ui.pushButton_CleanReceive.clicked.connect(                         lambda:self.slot_clean_receive())
+        ui.pushButton_StartSend.clicked.connect(                            lambda:self.slot_send())
+        ui.tableWidget_DataInfo.itemChanged.connect(                        lambda:self.slot_tableWidget_Anchor_changed())
+        ui.comboBox_Mode.currentTextChanged.connect(                        lambda:self.slot_mode_changed())
+        ui.horizontalSlider_Graphic.sliderPressed.connect(                  lambda:self.slot_graphic_slider_pressed())
+        ui.horizontalSlider_Graphic.sliderReleased.connect(                 lambda:self.slot_graphic_slider_released())
+        ui.horizontalSlider_Graphic.valueChanged.connect(                   lambda:self.slot_graphic_slider_changed())
         
-        ui.pushButton_RecordStart.clicked.connect(              lambda:self.slot_record_start_stop())
-        ui.pushButton_RecordSave.clicked.connect(               lambda:self.slot_record_save())
-        ui.pushButton_RecordRefresh.clicked.connect(            lambda:self.slot_record_refresh())
-        ui.pushButton_RecordPlay.clicked.connect(               lambda:self.slot_record_play())
-        ui.pushButton_RecordDelete.clicked.connect(             lambda:self.slot_record_delete())
-        ui.pushButton_RecordDir.clicked.connect(                lambda:self.slot_record_open_dir())
+        ui.pushButton_RecordStart.clicked.connect(                          lambda:self.slot_record_start_stop())
+        ui.pushButton_RecordSave.clicked.connect(                           lambda:self.slot_record_save())
+        ui.pushButton_RecordRefresh.clicked.connect(                        lambda:self.slot_record_refresh())
+        ui.pushButton_RecordPlay.clicked.connect(                           lambda:self.slot_record_play())
+        ui.pushButton_RecordDelete.clicked.connect(                         lambda:self.slot_record_delete())
+        ui.pushButton_RecordDir.clicked.connect(                            lambda:self.slot_record_open_dir())
         
-        ui.listWidget_RecordFiles.currentTextChanged.connect(   lambda f_name:self.slot_record_select(f_name))
+        ui.listWidget_RecordFiles.currentTextChanged.connect(               lambda f_name:self.slot_record_select(f_name))
+        
+        # 滚动条信号与槽
+        ui.horizontalScrollBar_Graphic.signal_scrollbar_ctrl_wheel.connect( lambda det:self.slot_griphic_scrollbar_ctrl_wheel(det))     # Ctrl + Wheel
+        ui.horizontalScrollBar_Graphic.valueChanged.connect(                lambda val:self.slot_griphic_scrollbar_val_changed(val))    # tracking() 值发生变化
+        # ui.horizontalScrollBar_Graphic.rangeChanged.connect(                lambda:self.slot_griphic_scrollbar_range_changed())
+        ui.horizontalScrollBar_Graphic.sliderPressed.connect(               lambda:self.slot_griphic_scrollbar_slider_pressed()) # 按下滑块
+        # ui.horizontalScrollBar_Graphic.sliderMoved.connect(                 lambda:self.slot_griphic_scrollbar_slider_moved())
+        ui.horizontalScrollBar_Graphic.sliderReleased.connect(              lambda:self.slot_griphic_scrollbar_slider_released())# 释放滑块
+        # ui.horizontalScrollBar_Graphic.actionTriggered.connect(             lambda:self.slot_griphic_scrollbar_action_trigged())
     
     # 更新需要动态显示的 UI
     def update_dynamic_ui_500ms(self):
@@ -516,6 +562,35 @@ class IndoorLocation(QObject):
         self.log(self.record.f_path_name)
         self.ui_main.pushButton_RecordPlay.setEnabled(True)
         self.ui_main.pushButton_RecordDelete.setEnabled(True)
+    
+    def slot_griphic_scrollbar_ctrl_wheel(self, det):
+        page_step_old = self.ui_main.horizontalScrollBar_Graphic.pageStep()
+        page_step_set = page_step_old + det
+        
+        if page_step_set > self.ui_main.horizontalScrollBar_Graphic.maximum():
+            page_step_set = self.ui_main.horizontalScrollBar_Graphic.maximum()
+            
+        if page_step_set < 1:
+            page_step_set = 1
+            
+        self.ui_main.horizontalScrollBar_Graphic.setPageStep(page_step_set)
+        self.ui_main.label_pagestep.setText('%d' %(page_step_set))
+        
+        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+        print('set pageStep: %d' %(page_step_set))
+        print('pageStep: min(%d) max(%d) singleStep(%d) pageStep(%d)' %(self.ui_main.horizontalScrollBar_Graphic.minimum(),
+                                                                        self.ui_main.horizontalScrollBar_Graphic.maximum(),
+                                                                        self.ui_main.horizontalScrollBar_Graphic.singleStep(),
+                                                                        self.ui_main.horizontalScrollBar_Graphic.pageStep() )    )
+    def slot_griphic_scrollbar_val_changed(self, val):
+        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+        print('changed:', val)
+    def slot_griphic_scrollbar_slider_pressed(self):
+        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+        print('pressed:')
+    def slot_griphic_scrollbar_slider_released(self):
+        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+        print('released:')
     
     def slot_graphic_slider_pressed(self):
         self.drawing_auto = False
@@ -775,6 +850,25 @@ class IndoorLocation(QObject):
     def update_uart_pkg_graphic_scrollbar(self, items_list):
         num = len(items_list)
         self.ui_main.horizontalScrollBar_Graphic.setMaximum(num)
+        self.ui_main.label_max.setText('%d' %(num))
+        
+    def update_record_item_dict(self):
+        self.record.item_dict['stamp'] = time_stamp_ms()
+        self.record.item_dict['x'] = self.new_pkg.x
+        self.record.item_dict['y'] = self.new_pkg.y
+        self.record.item_dict['d0'] = self.new_pkg.d0
+        self.record.item_dict['d1'] = self.new_pkg.d1
+        self.record.item_dict['d2'] = self.new_pkg.d2
+        self.record.item_dict['r0'] = self.new_pkg.r0
+        self.record.item_dict['r1'] = self.new_pkg.r1
+        self.record.item_dict['r2'] = self.new_pkg.r2
+        self.record.item_dict['a0.x'] = self.anchors[0].x
+        self.record.item_dict['a0.y'] = self.anchors[0].y
+        self.record.item_dict['a1.x'] = self.anchors[1].x
+        self.record.item_dict['a1.y'] = self.anchors[1].y
+        self.record.item_dict['a2.x'] = self.anchors[2].x
+        self.record.item_dict['a2.y'] = self.anchors[2].y
+        self.record.item_dict['raw'] = self.new_pkg.raw
     
     def receive_port_data_WangZeKun(self):
         port = self.port
@@ -787,35 +881,16 @@ class IndoorLocation(QObject):
                     port.rx_cache += new_bytes                      # 追加到接收缓存(此处不能用 append 方法)
                     port.read_id += 1                               # read_id 端口打开后第几次读取
                     
-                    while (len(port.rx_cache) >= 32):                               # 缓存区至少有一个包
-                        if(self.pkg_1T3A.update(port.rx_cache[0:32])):              # 尝试按照指定格式提取一个包
-                            port.rx_cache = port.rx_cache[32:]                      # 移除已处理部分
-                        
-                            self.record.item_dict['stamp'] = time_stamp_ms()
-                            self.record.item_dict['x'] = self.pkg_1T3A.x
-                            self.record.item_dict['y'] = self.pkg_1T3A.y
-                            self.record.item_dict['d0'] = self.pkg_1T3A.d0
-                            self.record.item_dict['d1'] = self.pkg_1T3A.d1
-                            self.record.item_dict['d2'] = self.pkg_1T3A.d2
-                            self.record.item_dict['r0'] = self.pkg_1T3A.r0
-                            self.record.item_dict['r1'] = self.pkg_1T3A.r1
-                            self.record.item_dict['r2'] = self.pkg_1T3A.r2
-                            self.record.item_dict['a0.x'] = self.anchors[0].x
-                            self.record.item_dict['a0.y'] = self.anchors[0].y
-                            self.record.item_dict['a1.x'] = self.anchors[1].x
-                            self.record.item_dict['a1.y'] = self.anchors[1].y
-                            self.record.item_dict['a2.x'] = self.anchors[2].x
-                            self.record.item_dict['a2.y'] = self.anchors[2].y
-                            self.record.item_dict['raw'] = self.pkg_1T3A.raw
+                    while (len(port.rx_cache) >= 32):                   # 缓存区至少有一个包
+                        if(self.new_pkg.update(port.rx_cache[0:32])):   # 尝试按照指定格式提取一个包
+                            port.rx_cache = port.rx_cache[32:]          # 移除已处理部分
                             
-                            self.update_uart_pkg_text_info(self.record.item_dict)   # self.update_uart_pkg_text_info(copy.copy(self.record.item_dict))
+                            self.update_record_item_dict()
+                            self.update_uart_pkg_text_info(self.record.item_dict)   # copy.copy(...)
                             
                             if(self.record.is_recording):                           # 更新记录缓存
                                 self.record.push_new_item()
                                 self.update_uart_pkg_graphic_scrollbar(self.record.items_list)
-                                
-                            # if self.drawing_auto:
-                            #     self.ui_main.horizontalSlider_Graphic.setRange(0, len(self.pkgs))
                                 
                         else:
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
