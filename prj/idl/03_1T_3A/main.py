@@ -4,7 +4,7 @@
 # region import
 from PySide2 import QtGui, QtWidgets, QtCore
 
-from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog, QScrollBar, QLabel
+from PySide2.QtWidgets import QApplication, QComboBox, QTabWidget, QTableWidgetItem, QFileDialog, QInputDialog, QScrollBar, QLabel, QCheckBox
 from PySide2.QtGui import QTextCursor, QTextFormat, QBrush, QColor
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QFile, QTextStream, QTimer, Signal, Slot, Qt
@@ -78,17 +78,17 @@ class Record():
         self.dir = './record'       # 记录文件保存路径
         self.is_recording = False   # 是否正在记录
         self.f_path_name = ''       # 被选中要操作的文件(路径+文件名+后缀)
+        
+        self.view_min = 0           # 开始
+        self.view_len = 0           # 实际长度
+        self.view_len_set = 1       # 设置的长度
+        self.view_max = 0           # 结束
+        
         self.start()
     
     def start(self):
         self.items_list = []        # 以列表方式存储记录信息(记录结束后有可能保存到文件 有可能丢弃)
         self.item_dict = {}         # 以字典方式存储新的记录项
-    
-    def stop(self):
-        pass
-    
-    def save(self):
-        pass
     
     def push_new_item(self):
         self.items_list.append(copy.copy(self.item_dict))
@@ -175,8 +175,6 @@ class IndoorLocation(QObject):
     # endregion
     
     new_pkg = Pkg_1T3A()
-    
-    drawing_idx = 0
     drawing_auto = True
     
     def __init__(self):
@@ -201,16 +199,16 @@ class IndoorLocation(QObject):
         # 初始化
         self.init_ui()
         
-        original_size = self.ui_main.dockWidget_Pkg.size()
-        # print()
-        # print('************************')
-        # print(type(original_size))
-        # print(original_size)
-        # print(original_size.width(), original_size.height())
-        # print('************************')
-        # print()
+        # original_size = self.ui_main.dockWidget_Pkg.size()
+        # # print()
+        # # print('************************')
+        # # print(type(original_size))
+        # # print(original_size)
+        # # print(original_size.width(), original_size.height())
+        # # print('************************')
+        # # print()
         
-        self.ui_main.dockWidget_Pkg.resize(100, original_size.height())     # resize 对 DockWidget 无效
+        # self.ui_main.dockWidget_Pkg.resize(100, original_size.height())     # resize 对 DockWidget 无效
         
         for i in range(len(self.anchors)):
             self.ui_main.tableWidget_DataInfo.setItem(i, 0, QTableWidgetItem(str(self.anchors[i].x)))
@@ -262,35 +260,11 @@ class IndoorLocation(QObject):
         self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
         self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))
         
-        ui.comboBox_name_raw.deleteLater()                  # 删掉 UI 生成的端口选择下拉框控件
-        ui.comboBox_name = PortComboBox()                   # 用自己重写的控件替换被删的
-        ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1) # 添加到原来的布局框中相同位置
+        ui.comboBox_name_raw.deleteLater()                                  # 删掉 UI 生成的端口选择下拉框控件
+        ui.comboBox_name = PortComboBox()                                   # 用自己重写的控件替换被删的
+        ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1)     # 添加到原来的布局框中相同位置
         
-        ui.horizontalScrollBar_GraphicRaw.deleteLater()     # 删掉 UI 生成的图像显示滑块
-        ui.horizontalScrollBar_Graphic = CustomQScrollBar(Qt.Horizontal) # 用自己重写的控件替换被删的
-        self.scrollbar_graphic_init()
-        ui.horizontalScrollBar_Graphic.setPageStep(1)
-        ui.horizontalScrollBar_Graphic.setSingleStep(1)
-        ui.verticalLayout_2D_Matplotlib.addWidget(ui.horizontalScrollBar_Graphic)
-        
-        # 加入3 个 label
-        # label_min = QLabel('min')
-        # ui.verticalLayout_2D_Matplotlib.addWidget(label_min)
-        
-        ui.label_min = QLabel('min')
-        ui.label_pagestep = QLabel('page_step')
-        ui.label_max = QLabel('max')
-        ui.label_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        
-        layout = QtWidgets.QHBoxLayout()
-        layout.addWidget(ui.label_min)
-        layout.addItem(QtWidgets.QSpacerItem(10, 5, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding))
-        layout.addWidget(ui.label_pagestep)
-        layout.addItem(QtWidgets.QSpacerItem(10, 5, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding))
-        layout.addWidget(ui.label_max)
-        
-        ui.verticalLayout_2D_Matplotlib.addItem(layout)
-        ui.tab_2D_Matplotlib.setLayout(ui.verticalLayout_2D_Matplotlib)
+        self.record_view_init_ui()
         
         self.slot_record_refresh()          # 更新记录目录下的文件
         
@@ -305,9 +279,6 @@ class IndoorLocation(QObject):
         
         self.update_2d_matplotlib_limit()
         
-        self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
-        self.ui_main.horizontalSlider_Graphic.setSingleStep(1)
-        
         # 将 Matlabplotlib 3D 图像嵌入界面
         layout = self.ui_main.horizontalLayout_3D_Matplotlib    # <class 'PySide2.QtWidgets.QHBoxLayout'>
         self.canvas_3d_matplotlib = FigureCanvas(Figure())      # <class 'matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg'>
@@ -319,7 +290,69 @@ class IndoorLocation(QObject):
         
         self.slot_mode_changed()
     
-    def scrollbar_graphic_init(self):
+    def record_view_init_ui(self):
+        ui = self.ui_main
+        
+        # 删掉 Designer 生成的滑块 重写一个 占据相同的位置
+        ui.horizontalScrollBar_GraphicRaw.deleteLater()
+        ui.horizontalScrollBar_Graphic = CustomQScrollBar(Qt.Horizontal)
+        ui.horizontalScrollBar_Graphic.setPageStep(1)
+        ui.horizontalScrollBar_Graphic.setSingleStep(1)
+        self.graphic_scrollbar_val_init()
+        
+        # record label
+        ui.label_record_min = QLabel('min:0')
+        ui.label_record_idx = QLabel('idx:0')
+        ui.label_record_max = QLabel('max:0')
+        
+        # record_view label
+        ui.label_view_min = QLabel('min:%d' %(self.record.view_min))
+        ui.label_view_len = QLabel('len:%d(%d)' %(self.record.view_len, self.record.view_len_set))
+        ui.label_view_max = QLabel('max:%d' %(self.record.view_max))
+        
+        ui.checkbox_graphic_all = QCheckBox('All')
+        
+        # 高度固定
+        ui.label_record_min.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        ui.label_record_idx.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        ui.label_record_max.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        
+        ui.label_view_min.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        ui.label_view_len.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        ui.label_view_max.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        
+        ui.checkbox_graphic_all.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        
+        # 齐方式
+        ui.label_record_min.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        ui.label_record_idx.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        ui.label_record_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        
+        ui.label_view_min.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        ui.label_view_len.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        ui.label_view_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        
+        # record label 水平布局
+        layout_record = QtWidgets.QHBoxLayout()
+        layout_record_view = QtWidgets.QHBoxLayout()
+        
+        layout_record.addWidget(ui.label_record_min)
+        layout_record.addWidget(ui.label_record_idx)
+        layout_record.addWidget(ui.label_record_max)
+        
+        layout_record_view.addWidget(ui.checkbox_graphic_all)
+        layout_record_view.addWidget(ui.label_view_min)
+        layout_record_view.addWidget(ui.label_view_len)
+        layout_record_view.addWidget(ui.label_view_max)
+        
+        ui.verticalLayout_2D_Matplotlib.addItem(layout_record)
+        ui.verticalLayout_2D_Matplotlib.addWidget(ui.horizontalScrollBar_Graphic)
+        ui.verticalLayout_2D_Matplotlib.addItem(layout_record_view)
+        
+        # 如果添加的全部是 Wiedget 则无需此操作(上面添加了 layout)
+        ui.tab_2D_Matplotlib.setLayout(ui.verticalLayout_2D_Matplotlib)
+    
+    def graphic_scrollbar_val_init(self):
         self.ui_main.horizontalScrollBar_Graphic.setValue(0)
         self.ui_main.horizontalScrollBar_Graphic.setMinimum(0)
         self.ui_main.horizontalScrollBar_Graphic.setMaximum(0)
@@ -360,9 +393,6 @@ class IndoorLocation(QObject):
         ui.pushButton_StartSend.clicked.connect(                            lambda:self.slot_send())
         ui.tableWidget_DataInfo.itemChanged.connect(                        lambda:self.slot_tableWidget_Anchor_changed())
         ui.comboBox_Mode.currentTextChanged.connect(                        lambda:self.slot_mode_changed())
-        ui.horizontalSlider_Graphic.sliderPressed.connect(                  lambda:self.slot_graphic_slider_pressed())
-        ui.horizontalSlider_Graphic.sliderReleased.connect(                 lambda:self.slot_graphic_slider_released())
-        ui.horizontalSlider_Graphic.valueChanged.connect(                   lambda:self.slot_graphic_slider_changed())
         
         ui.pushButton_RecordStart.clicked.connect(                          lambda:self.slot_record_start_stop())
         ui.pushButton_RecordSave.clicked.connect(                           lambda:self.slot_record_save())
@@ -381,6 +411,8 @@ class IndoorLocation(QObject):
         # ui.horizontalScrollBar_Graphic.sliderMoved.connect(                 lambda:self.slot_griphic_scrollbar_slider_moved())
         ui.horizontalScrollBar_Graphic.sliderReleased.connect(              lambda:self.slot_griphic_scrollbar_slider_released())# 释放滑块
         # ui.horizontalScrollBar_Graphic.actionTriggered.connect(             lambda:self.slot_griphic_scrollbar_action_trigged())
+        
+        ui.checkbox_graphic_all.stateChanged.connect(                       lambda sta:self.slot_checkbox_record_view_all_changed(sta))
     
     # 更新需要动态显示的 UI
     def update_dynamic_ui_500ms(self):
@@ -487,17 +519,12 @@ class IndoorLocation(QObject):
             self.ui_main.pushButton_RecordStart.setStatusTip('结束记录')
             self.ui_main.pushButton_RecordSave.setEnabled(False)
             self.update_dynamic_ui_500ms()
-            self.scrollbar_graphic_init()
+            self.graphic_scrollbar_val_init()
             
-            self.drawing_idx = 0
-            self.ui_main.horizontalSlider_Graphic.setValue(0)
-            self.ui_main.horizontalSlider_Graphic.setRange(0, 0)
             self.ui_main.plainTextEdit_Hex.clear()
             
         # 记录结束
         else:
-            self.record.stop()
-            
             self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_128x128_red_dot.png'))
             self.ui_main.pushButton_RecordStart.setText('开始')
             self.ui_main.pushButton_RecordStart.setStatusTip('开始记录')
@@ -564,54 +591,60 @@ class IndoorLocation(QObject):
         self.ui_main.pushButton_RecordDelete.setEnabled(True)
     
     def slot_griphic_scrollbar_ctrl_wheel(self, det):
-        page_step_old = self.ui_main.horizontalScrollBar_Graphic.pageStep()
-        page_step_set = page_step_old + det
         
-        if page_step_set > self.ui_main.horizontalScrollBar_Graphic.maximum():
-            page_step_set = self.ui_main.horizontalScrollBar_Graphic.maximum()
+        # 非绘制全部数据包模式下才有效
+        if not self.ui_main.checkbox_graphic_all.isChecked():
+            if det > 0:
+                if self.record.view_len_set < self.ui_main.horizontalScrollBar_Graphic.maximum():
+                    self.record.view_len_set *= 2
+                    if 0 == self.record.view_len_set:
+                        self.record.view_len_set = 1
+            elif det < 0:
+                if self.record.view_len_set >= 1:
+                    self.record.view_len_set //= 2
             
-        if page_step_set < 1:
-            page_step_set = 1
+        self.update_record_view()
+    
+    def update_record_view_value(self):
+        if self.ui_main.checkbox_graphic_all.isChecked():
+            self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.maximum()
+            self.record.view_min = self.ui_main.horizontalScrollBar_Graphic.minimum()
+            self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
+        else:
+            self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.value()
+            self.record.view_min = self.record.view_max - self.record.view_len_set
             
-        self.ui_main.horizontalScrollBar_Graphic.setPageStep(page_step_set)
-        self.ui_main.label_pagestep.setText('%d' %(page_step_set))
+        if self.record.view_min < self.ui_main.horizontalScrollBar_Graphic.minimum():
+            self.record.view_min = self.ui_main.horizontalScrollBar_Graphic.minimum()
         
-        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-        print('set pageStep: %d' %(page_step_set))
-        print('pageStep: min(%d) max(%d) singleStep(%d) pageStep(%d)' %(self.ui_main.horizontalScrollBar_Graphic.minimum(),
-                                                                        self.ui_main.horizontalScrollBar_Graphic.maximum(),
-                                                                        self.ui_main.horizontalScrollBar_Graphic.singleStep(),
-                                                                        self.ui_main.horizontalScrollBar_Graphic.pageStep() )    )
+        self.record.view_len = self.record.view_max - self.record.view_min
+        self.ui_main.horizontalScrollBar_Graphic.setPageStep(self.record.view_len)
+    
+    def update_record_view_label(self):
+        self.ui_main.label_view_min.setText('min:%d' %(self.record.view_min))
+        self.ui_main.label_view_len.setText('len:%d(%d)' %(self.record.view_len, self.record.view_len_set))
+        self.ui_main.label_view_max.setText('max:%d' %(self.record.view_max))
+    
+    def update_record_view(self):
+        self.update_record_view_value()
+        self.update_record_view_label()
+        
     def slot_griphic_scrollbar_val_changed(self, val):
-        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-        print('changed:', val)
+        self.update_record_view()
+        self.ui_main.label_record_idx.setText('idx:%d' %(val))
     def slot_griphic_scrollbar_slider_pressed(self):
         print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
         print('pressed:')
     def slot_griphic_scrollbar_slider_released(self):
         print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
         print('released:')
-    
-    def slot_graphic_slider_pressed(self):
-        self.drawing_auto = False
-    
-    def slot_graphic_slider_released(self):
-        self.drawing_auto = True
         
-        if self.port.isopen:
-            if self.drawing_idx < len(self.tags):
-                self.ui_main.horizontalSlider_Graphic.setValue(len(self.tags))
-        else:
-            self.drawing_idx = self.ui_main.horizontalSlider_Graphic.value()
-    
-    def slot_graphic_slider_changed(self):
-        idx = self.ui_main.horizontalSlider_Graphic.value()
-        if not self.drawing_auto:
-            if idx < len(self.tags):
-                self.clear_display_2d_matplotlib()
-                self.draw_a_pkg(idx)
-                self.axes_2d_static.figure.canvas.draw()
-    
+    def slot_checkbox_record_view_all_changed(self, sta):
+        if 0 == sta:    # 不选中
+            self.ui_main.checkbox_graphic_all.setStyleSheet('background-color:rgb(240, 240, 240)')
+        elif 2 == sta:  # 选中
+            self.ui_main.checkbox_graphic_all.setStyleSheet('background-color:gray')
+        
     def slot_win_set_visibility_changed(self, visable):
         self.ui_main.action_ViewSet.setChecked(visable)
     
@@ -847,10 +880,10 @@ class IndoorLocation(QObject):
         self.ui_main.lineEdit_PkgRaw.setText(pkg_stamp + pkg_raw)
         self.ui_main.lineEdit_PkgInfo.setText(pkg_info)
     
-    def update_uart_pkg_graphic_scrollbar(self, items_list):
-        num = len(items_list)
-        self.ui_main.horizontalScrollBar_Graphic.setMaximum(num)
-        self.ui_main.label_max.setText('%d' %(num))
+    def update_record_len(self, len):
+        max = len - 1
+        self.ui_main.horizontalScrollBar_Graphic.setMaximum(max)
+        self.ui_main.label_record_max.setText('%d' %(max))
         
     def update_record_item_dict(self):
         self.record.item_dict['stamp'] = time_stamp_ms()
@@ -890,7 +923,8 @@ class IndoorLocation(QObject):
                             
                             if(self.record.is_recording):                           # 更新记录缓存
                                 self.record.push_new_item()
-                                self.update_uart_pkg_graphic_scrollbar(self.record.items_list)
+                                self.update_record_len(len(self.record.items_list))
+                                self.update_record_view()
                                 
                         else:
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
@@ -958,14 +992,10 @@ class IndoorLocation(QObject):
         # if self.drawing_idx < len(self.tags):
         #     # 取出数据包
         #     if self.drawing_auto and self.port.isopen:
-                
         #         # 开始图形化
         #         self.clear_display_2d_matplotlib()
         #         self.draw_a_pkg(self.drawing_idx)
         #         self.axes_2d_static.figure.canvas.draw()
-                
-        #         self.ui_main.horizontalSlider_Graphic.setValue(self.drawing_idx + 1)
-                
         #         self.drawing_idx += 1
         pass
 

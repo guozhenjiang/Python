@@ -108,7 +108,7 @@
        <attribute name="title">
         <string>2D_Matplotlib</string>
        </attribute>
-       <widget class="QWidget" name="">
+       <widget class="QWidget" name="layoutWidget">
         <property name="geometry">
          <rect>
           <x>9</x>
@@ -175,19 +175,6 @@
           <widget class="QLineEdit" name="lineEdit_PkgInfo">
            <property name="placeholderText">
             <string>Info</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSlider" name="horizontalSlider_Graphic">
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 0, 0);</string>
-           </property>
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="tickPosition">
-            <enum>QSlider::TicksAbove</enum>
            </property>
           </widget>
          </item>
