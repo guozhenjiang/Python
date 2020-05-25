@@ -92,6 +92,7 @@ class Record():
     
     def push_new_item(self):
         self.items_list.append(copy.copy(self.item_dict))
+        self.cache_max = len(self.items_list)
     
     def len(self):
         return len(self.items_list)
@@ -298,12 +299,13 @@ class IndoorLocation(QObject):
         ui.horizontalScrollBar_Graphic = CustomQScrollBar(Qt.Horizontal)
         ui.horizontalScrollBar_Graphic.setPageStep(1)
         ui.horizontalScrollBar_Graphic.setSingleStep(1)
-        self.graphic_scrollbar_val_init()
         
         # record label
-        ui.label_record_min = QLabel('min:0')
+        ui.label_record_min = QLabel('min:0')       # 最小是 0 表示没有收到数据包
         ui.label_record_idx = QLabel('idx:0')
         ui.label_record_max = QLabel('max:0')
+        
+        self.update_record_value_and_label(0, 0, 0)
         
         # record_view label
         ui.label_view_min = QLabel('min:%d' %(self.record.view_min))
@@ -352,10 +354,19 @@ class IndoorLocation(QObject):
         # 如果添加的全部是 Wiedget 则无需此操作(上面添加了 layout)
         ui.tab_2D_Matplotlib.setLayout(ui.verticalLayout_2D_Matplotlib)
     
-    def graphic_scrollbar_val_init(self):
-        self.ui_main.horizontalScrollBar_Graphic.setValue(0)
-        self.ui_main.horizontalScrollBar_Graphic.setMinimum(0)
-        self.ui_main.horizontalScrollBar_Graphic.setMaximum(0)
+    def update_record_len_scrollbar_and_label(self):
+        max = self.record.len()
+        self.ui_main.horizontalScrollBar_Graphic.setMaximum(max)
+        self.ui_main.label_record_max.setText('max:%d' %(max))
+    
+    def update_record_value_and_label(self, min, idx, max):
+        self.ui_main.horizontalScrollBar_Graphic.setMinimum(min)
+        self.ui_main.horizontalScrollBar_Graphic.setMaximum(max)
+        self.ui_main.horizontalScrollBar_Graphic.setValue(idx)
+        
+        self.ui_main.label_record_min.setText('min:%d' %(min))
+        self.ui_main.label_record_idx.setText('idx:%d' %(idx))
+        self.ui_main.label_record_max.setText('max:%d' %(max))
     
     def init_signal_slot(self):
         self.log('初始化 Signal Slot')
@@ -519,7 +530,8 @@ class IndoorLocation(QObject):
             self.ui_main.pushButton_RecordStart.setStatusTip('结束记录')
             self.ui_main.pushButton_RecordSave.setEnabled(False)
             self.update_dynamic_ui_500ms()
-            self.graphic_scrollbar_val_init()
+            
+            self.update_record_value_and_label(0, 0, 0)
             
             self.ui_main.plainTextEdit_Hex.clear()
             
@@ -572,7 +584,7 @@ class IndoorLocation(QObject):
         
     
     def slot_record_play(self):
-        self.log('回放选中的记录文件')
+        self.log('回放 %s' %(self.record.f_path_name))
     
     def slot_record_delete(self):
         self.log('删除: %s' %(self.record.f_path_name))
@@ -591,33 +603,58 @@ class IndoorLocation(QObject):
         self.ui_main.pushButton_RecordDelete.setEnabled(True)
     
     def slot_griphic_scrollbar_ctrl_wheel(self, det):
-        
-        # 非绘制全部数据包模式下才有效
-        if not self.ui_main.checkbox_graphic_all.isChecked():
-            if det > 0:
-                if self.record.view_len_set < self.ui_main.horizontalScrollBar_Graphic.maximum():
-                    self.record.view_len_set *= 2
-                    if 0 == self.record.view_len_set:
-                        self.record.view_len_set = 1
-            elif det < 0:
-                if self.record.view_len_set >= 1:
-                    self.record.view_len_set //= 2
+        if det > 0:
+            if self.record.view_len_set < self.ui_main.horizontalScrollBar_Graphic.maximum():
+                self.record.view_len_set *= 2
+                if 0 == self.record.view_len_set:
+                    self.record.view_len_set = 1
+        elif det < 0:
+            if self.record.view_len_set >= 1:
+                self.record.view_len_set //= 2
             
-        self.update_record_view()
+        self.update_record_view_scrollbar_and_label()
     
     def update_record_view_value(self):
-        if self.ui_main.checkbox_graphic_all.isChecked():
-            self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.maximum()
-            self.record.view_min = self.ui_main.horizontalScrollBar_Graphic.minimum()
-            self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
-        else:
-            self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.value()
-            self.record.view_min = self.record.view_max - self.record.view_len_set
-            
-        if self.record.view_min < self.ui_main.horizontalScrollBar_Graphic.minimum():
-            self.record.view_min = self.ui_main.horizontalScrollBar_Graphic.minimum()
+        pass
+    
+    def update_record_view_scrollbar(self):
+        # 关闭绘图(手动关闭 或者 记录为空)
+        if (0 == self.record.view_len_set) or (self.record.):
+            pass
         
-        self.record.view_len = self.record.view_max - self.record.view_min
+        # 图形化全部数据包
+        elif self.ui_main.checkbox_graphic_all.isChecked():
+            # 至少记录了一个数据包
+            if self.ui_main.horizontalScrollBar_Graphic.maximum() > 0:
+                self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.maximum()
+                self.record.view_min = 1
+                self.record.view_len = self.record.view_max
+                self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
+            # 记录为空
+            else:
+                self.record.view_min = 0
+                self.record.view_len = 0
+                self.record.view_max = 0
+        
+        # 仅图形化需要的数据包
+        else:
+            # 至少记录了一个数据包
+            if self.ui_main.horizontalScrollBar_Graphic.maximum() > 0:
+                self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.value()
+                self.record.view_min = self.record.view_max - self.record.view_len_set + 1
+                
+                # 起始至当前位置不够指定的数目
+                if self.record.view_min < 1:
+                    self.record.view_min = 1
+                
+                self.record.view_len = self.record.view_max - self.record.view_min + 1
+            # 记录为空
+            else:
+                self.record.view_min = 0
+                self.record.view_len = 0
+                self.record.view_max = 0
+        
+        # self.ui_main.horizontalScrollBar_Graphic.setValue(self.record.view_max)
         self.ui_main.horizontalScrollBar_Graphic.setPageStep(self.record.view_len)
     
     def update_record_view_label(self):
@@ -625,12 +662,13 @@ class IndoorLocation(QObject):
         self.ui_main.label_view_len.setText('len:%d(%d)' %(self.record.view_len, self.record.view_len_set))
         self.ui_main.label_view_max.setText('max:%d' %(self.record.view_max))
     
-    def update_record_view(self):
+    def update_record_view_scrollbar_and_label(self):
         self.update_record_view_value()
+        self.update_record_view_scrollbar()
         self.update_record_view_label()
         
     def slot_griphic_scrollbar_val_changed(self, val):
-        self.update_record_view()
+        self.update_record_view_scrollbar_and_label()
         self.ui_main.label_record_idx.setText('idx:%d' %(val))
     def slot_griphic_scrollbar_slider_pressed(self):
         print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
@@ -644,6 +682,8 @@ class IndoorLocation(QObject):
             self.ui_main.checkbox_graphic_all.setStyleSheet('background-color:rgb(240, 240, 240)')
         elif 2 == sta:  # 选中
             self.ui_main.checkbox_graphic_all.setStyleSheet('background-color:gray')
+        
+        self.update_record_view_scrollbar_and_label()
         
     def slot_win_set_visibility_changed(self, visable):
         self.ui_main.action_ViewSet.setChecked(visable)
@@ -880,11 +920,6 @@ class IndoorLocation(QObject):
         self.ui_main.lineEdit_PkgRaw.setText(pkg_stamp + pkg_raw)
         self.ui_main.lineEdit_PkgInfo.setText(pkg_info)
     
-    def update_record_len(self, len):
-        max = len - 1
-        self.ui_main.horizontalScrollBar_Graphic.setMaximum(max)
-        self.ui_main.label_record_max.setText('%d' %(max))
-        
     def update_record_item_dict(self):
         self.record.item_dict['stamp'] = time_stamp_ms()
         self.record.item_dict['x'] = self.new_pkg.x
@@ -923,8 +958,8 @@ class IndoorLocation(QObject):
                             
                             if(self.record.is_recording):                           # 更新记录缓存
                                 self.record.push_new_item()
-                                self.update_record_len(len(self.record.items_list))
-                                self.update_record_view()
+                                self.update_record_len_scrollbar_and_label()
+                                self.update_record_view_scrollbar_and_label()
                                 
                         else:
                             port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
