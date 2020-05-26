@@ -158,7 +158,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2D_">
+          <layout class="QHBoxLayout" name="horizontalLayout_2D">
            <property name="spacing">
             <number>2</number>
            </property>

@@ -92,7 +92,6 @@ class Record():
     
     def push_new_item(self):
         self.items_list.append(copy.copy(self.item_dict))
-        self.cache_max = len(self.items_list)
     
     def len(self):
         return len(self.items_list)
@@ -270,10 +269,10 @@ class IndoorLocation(QObject):
         self.slot_record_refresh()          # 更新记录目录下的文件
         
         # 将 Matlabplotlib 2D 图像嵌入界面
-        layout = self.ui_main.horizontalLayout_2D_          # <class 'PySide2.QtWidgets.QHBoxLayout'>
+        # layout = self.ui_main.horizontalLayout_2D          # <class 'PySide2.QtWidgets.QHBoxLayout'>
         
         self.canvas_2d_matplotlib = FigureCanvas(Figure())  # <class 'matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg'>
-        layout.addWidget(self.canvas_2d_matplotlib)
+        ui.horizontalLayout_2D.addWidget(self.canvas_2d_matplotlib)
         
         self.axes_2d_static = self.canvas_2d_matplotlib.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
         self.axes_2d_static.grid(True)
@@ -281,13 +280,15 @@ class IndoorLocation(QObject):
         self.update_2d_matplotlib_limit()
         
         # 将 Matlabplotlib 3D 图像嵌入界面
-        layout = self.ui_main.horizontalLayout_3D_Matplotlib    # <class 'PySide2.QtWidgets.QHBoxLayout'>
-        self.canvas_3d_matplotlib = FigureCanvas(Figure())      # <class 'matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg'>
-        layout.addWidget(self.canvas_3d_matplotlib)
+        # self.canvas_3d_matplotlib = FigureCanvas(Figure())      # <class 'matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg'>
+        self.canvas_3d_matplotlib = FigureCanvas(Figure())
+        ui.horizontalLayout_3D_Matplotlib.addWidget(self.canvas_3d_matplotlib)
         self.axes_3d_static = self.canvas_3d_matplotlib.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
         self.axes_3d_static.grid(True)
         
-        self.ui_main.tableWidget_DataInfo.setHorizontalHeaderLabels(['x', 'y', 'z'])
+        # 添加 matplotlib 工具栏是有效的 只不过添加后部分功能没有
+        # self.ui_main.toolbar = NavigationToolbar(self.canvas_3d_matplotlib, self.ui_main)
+        # self.ui_main.verticalLayout_2D_Matplotlib.addWidget(self.ui_main.toolbar)
         
         self.slot_mode_changed()
     
@@ -355,9 +356,14 @@ class IndoorLocation(QObject):
         ui.tab_2D_Matplotlib.setLayout(ui.verticalLayout_2D_Matplotlib)
     
     def update_record_len_scrollbar_and_label(self):
-        max = self.record.len()
-        self.ui_main.horizontalScrollBar_Graphic.setMaximum(max)
-        self.ui_main.label_record_max.setText('max:%d' %(max))
+        record_len = self.record.len()
+        
+        if (0 == self.ui_main.horizontalScrollBar_Graphic.minimum()) and (record_len > 0):
+            self.ui_main.horizontalScrollBar_Graphic.setMinimum(1)
+            self.ui_main.label_record_min.setText('min:%d' %(self.ui_main.horizontalScrollBar_Graphic.minimum()))
+            
+        self.ui_main.horizontalScrollBar_Graphic.setMaximum(record_len)
+        self.ui_main.label_record_max.setText('max:%d' %(record_len))
     
     def update_record_value_and_label(self, min, idx, max):
         self.ui_main.horizontalScrollBar_Graphic.setMinimum(min)
@@ -425,10 +431,10 @@ class IndoorLocation(QObject):
         
         ui.checkbox_graphic_all.stateChanged.connect(                       lambda sta:self.slot_checkbox_record_view_all_changed(sta))
     
-    # 更新需要动态显示的 UI
-    def update_dynamic_ui_500ms(self):
-        self.ui_cnt_recording += 1
+    # 更新需要动态显示的 UI 每 500ms 调用一次
+    def update_dynamic_ui(self):
         if(self.record.is_recording):
+            self.ui_cnt_recording += 1
             if(1 == self.ui_cnt_recording % 2):
                 self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_green.png'))
             elif(0 == self.ui_cnt_recording % 2):
@@ -529,7 +535,7 @@ class IndoorLocation(QObject):
             self.ui_main.pushButton_RecordStart.setText('结束')
             self.ui_main.pushButton_RecordStart.setStatusTip('结束记录')
             self.ui_main.pushButton_RecordSave.setEnabled(False)
-            self.update_dynamic_ui_500ms()
+            self.update_dynamic_ui()
             
             self.update_record_value_and_label(0, 0, 0)
             
@@ -613,59 +619,43 @@ class IndoorLocation(QObject):
                 self.record.view_len_set //= 2
             
         self.update_record_view_scrollbar_and_label()
-    
-    def update_record_view_value(self):
-        pass
-    
-    def update_record_view_scrollbar(self):
-        # 关闭绘图(手动关闭 或者 记录为空)
-        if (0 == self.record.view_len_set) or (self.record.):
-            pass
         
-        # 图形化全部数据包
-        elif self.ui_main.checkbox_graphic_all.isChecked():
-            # 至少记录了一个数据包
-            if self.ui_main.horizontalScrollBar_Graphic.maximum() > 0:
-                self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.maximum()
-                self.record.view_min = 1
-                self.record.view_len = self.record.view_max
+    def update_record_view_scrollbar_and_label(self):
+        # 记录非空
+        if self.ui_main.horizontalScrollBar_Graphic.minimum() > 0:
+            
+            # 全部显示
+            if self.ui_main.checkbox_graphic_all.isChecked():
                 self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
-            # 记录为空
-            else:
-                self.record.view_min = 0
-                self.record.view_len = 0
-                self.record.view_max = 0
-        
-        # 仅图形化需要的数据包
-        else:
-            # 至少记录了一个数据包
-            if self.ui_main.horizontalScrollBar_Graphic.maximum() > 0:
+                self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.value()
+                self.record.view_min = self.ui_main.horizontalScrollBar_Graphic.minimum()
+                self.record.view_len = self.ui_main.horizontalScrollBar_Graphic.maximum()
+            
+            # 显示非空长度
+            elif self.record.view_len_set > 0:
                 self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.value()
                 self.record.view_min = self.record.view_max - self.record.view_len_set + 1
-                
-                # 起始至当前位置不够指定的数目
-                if self.record.view_min < 1:
-                    self.record.view_min = 1
-                
+                if self.record.view_min < self.ui_main.horizontalScrollBar_Graphic.minimum():
+                    self.record.view_min = self.ui_main.horizontalScrollBar_Graphic.minimum()
                 self.record.view_len = self.record.view_max - self.record.view_min + 1
-            # 记录为空
+            
+            # 显示关闭
             else:
-                self.record.view_min = 0
+                self.record.view_max = self.ui_main.horizontalScrollBar_Graphic.value()
+                self.record.view_min = self.ui_main.horizontalScrollBar_Graphic.value()
                 self.record.view_len = 0
-                self.record.view_max = 0
         
-        # self.ui_main.horizontalScrollBar_Graphic.setValue(self.record.view_max)
+        # 记录为空
+        else:
+            self.record.view_min = 0
+            self.record.view_max = 0
+            self.record.view_len = 0
+        
         self.ui_main.horizontalScrollBar_Graphic.setPageStep(self.record.view_len)
-    
-    def update_record_view_label(self):
+        
         self.ui_main.label_view_min.setText('min:%d' %(self.record.view_min))
         self.ui_main.label_view_len.setText('len:%d(%d)' %(self.record.view_len, self.record.view_len_set))
         self.ui_main.label_view_max.setText('max:%d' %(self.record.view_max))
-    
-    def update_record_view_scrollbar_and_label(self):
-        self.update_record_view_value()
-        self.update_record_view_scrollbar()
-        self.update_record_view_label()
         
     def slot_griphic_scrollbar_val_changed(self, val):
         self.update_record_view_scrollbar_and_label()
@@ -896,13 +886,9 @@ class IndoorLocation(QObject):
     def slot_dock_show_hide(self, dock_set, is_checked):
         dock_set.setVisible(is_checked)
     
-    def receive_port_data(self):
+    def update_uart_rx(self):
         if self.port.isopen:
-            if('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
-                self.receive_port_data_WangZeKun()
-            
-            elif('DongHan' == self.ui_main.comboBox_Mode.currentText()):
-                pass
+            self.uart_rx_handle()
     
     def update_uart_pkg_text_info(self, item_dict):
         pkg_stamp = item_dict['stamp']
@@ -938,31 +924,35 @@ class IndoorLocation(QObject):
         self.record.item_dict['a2.y'] = self.anchors[2].y
         self.record.item_dict['raw'] = self.new_pkg.raw
     
-    def receive_port_data_WangZeKun(self):
+    def uart_rx_handle(self):
         port = self.port
         
-        if len(port.rx_cache)<32:                                   # 已缓存的数据不足一个包(不做此判断 会在每个 Byte 收到后快速、重复的进入 导致卡顿)
+        # 已缓存的数据不足一个包(不做此判断 会在每个 Byte 收到后快速、重复的进入 导致卡顿)
+        if len(port.rx_cache)<32:
             try:
-                num = port.port.in_waiting              
-                if(num > 0):                                        # 有数据待读取
-                    new_bytes = port.port.read(num)                 # 读取接收缓冲区全部数据
-                    port.rx_cache += new_bytes                      # 追加到接收缓存(此处不能用 append 方法)
-                    port.read_id += 1                               # read_id 端口打开后第几次读取
+                num = port.port.in_waiting
+                if(num > 0):                                    # 有数据待读取
+                    new_bytes = port.port.read(num)             # 读取接收缓冲区全部数据
+                    port.rx_cache += new_bytes                  # 追加到接收缓存(此处不能用 append 方法)
+                    port.read_id += 1                           # read_id 端口打开后第几次读取
                     
-                    while (len(port.rx_cache) >= 32):                   # 缓存区至少有一个包
-                        if(self.new_pkg.update(port.rx_cache[0:32])):   # 尝试按照指定格式提取一个包
-                            port.rx_cache = port.rx_cache[32:]          # 移除已处理部分
+                    while (len(port.rx_cache) >= 32):           # 缓存区至少有一个包
+                        
+                        # 成功提取了一个数据包
+                        if(self.new_pkg.update(port.rx_cache[0:32])):
+                            port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
                             
                             self.update_record_item_dict()
                             self.update_uart_pkg_text_info(self.record.item_dict)   # copy.copy(...)
                             
-                            if(self.record.is_recording):                           # 更新记录缓存
+                            if(self.record.is_recording):
                                 self.record.push_new_item()
                                 self.update_record_len_scrollbar_and_label()
                                 self.update_record_view_scrollbar_and_label()
-                                
+                        
+                        # 重新对齐帧头
                         else:
-                            port.rx_cache = port.rx_cache[1:]       # 重新对其帧头
+                            port.rx_cache = port.rx_cache[1:]
             except Exception as e:
                 print('串口异常')
                 print(e)
@@ -1021,9 +1011,8 @@ class IndoorLocation(QObject):
             
         #     # self.axes_2d_static.figure.canvas.draw()
         pass
-        
     
-    def update_graphic(self):
+    def update_record_graphic(self):
         # if self.drawing_idx < len(self.tags):
         #     # 取出数据包
         #     if self.drawing_auto and self.port.isopen:
@@ -1041,15 +1030,15 @@ if __name__ == '__main__':
     idl.ui_main.show()
 
     timer_SerialRx = QTimer()
-    timer_SerialRx.timeout.connect(idl.receive_port_data)
+    timer_SerialRx.timeout.connect(idl.update_uart_rx)
     timer_SerialRx.start(1)
 
     timer_UpdateGraphic = QTimer()
-    timer_UpdateGraphic.timeout.connect(idl.update_graphic)
+    timer_UpdateGraphic.timeout.connect(idl.update_record_graphic)
     timer_UpdateGraphic.start(100)
 
     timer_UpdateDynamicUI = QTimer()
-    timer_UpdateDynamicUI.timeout.connect(idl.update_dynamic_ui_500ms)
+    timer_UpdateDynamicUI.timeout.connect(idl.update_dynamic_ui)
     timer_UpdateDynamicUI.start(500)
     
     sys.exit(app.exec_())
