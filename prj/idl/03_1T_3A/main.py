@@ -23,8 +23,11 @@ from matplotlib.pyplot import *
 from matplotlib.backends.backend_qt5agg import (FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+import matplotlib.patches as mpatches
 
 import csv
+import pandas as pd
 # endregion
 
 # region 基本公共方法
@@ -157,14 +160,15 @@ class CustomQScrollBar(QScrollBar):
     def wheelEvent(self, event):
         modifiers = QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.ControlModifier:
-            print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-            print('Ctrl + Wheel:', event.delta())
+            # print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+            # print('Ctrl + Wheel:', event.delta())
             
             self.signal_scrollbar_ctrl_wheel.emit(event.delta() / 120)
             
         if modifiers == QtCore.Qt.ShiftModifier:
-            print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-            print('Shift + Wheel:', event.delta())
+            # print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+            # print('Shift + Wheel:', event.delta())
+            pass
             
 class IndoorLocation(QObject):
     # region 基站
@@ -175,7 +179,9 @@ class IndoorLocation(QObject):
     # endregion
     
     new_pkg = Pkg_1T3A()
-    drawing_auto = True
+    
+    drawing_end = 0
+    drawing_len = 0
     
     def __init__(self):
         self.record = Record()                              # 数据记录
@@ -199,53 +205,18 @@ class IndoorLocation(QObject):
         # 初始化
         self.init_ui()
         
-        # original_size = self.ui_main.dockWidget_Pkg.size()
-        # # print()
-        # # print('************************')
-        # # print(type(original_size))
-        # # print(original_size)
-        # # print(original_size.width(), original_size.height())
-        # # print('************************')
-        # # print()
-        
-        # self.ui_main.dockWidget_Pkg.resize(100, original_size.height())     # resize 对 DockWidget 无效
-        
         for i in range(len(self.anchors)):
             self.ui_main.tableWidget_DataInfo.setItem(i, 0, QTableWidgetItem(str(self.anchors[i].x)))
             self.ui_main.tableWidget_DataInfo.setItem(i, 1, QTableWidgetItem(str(self.anchors[i].y)))
             self.ui_main.tableWidget_DataInfo.setItem(i, 2, QTableWidgetItem(str(self.anchors[i].z)))
         
         self.init_signal_slot()
-        # self.slot_port_scan()
         self.slot_PortComboBox_showPopup()
     
     # Log 功能
     def log(self, log):
-        # time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        # 2020-04-17 14:21:40
-        
-        # print(time.perf_counter(), ' --- ', time.process_time())
-        self.log_stamp = time.perf_counter()    # time.clock()  time.process_time()
-        log_stamp_det = self.log_stamp - self.log_stamp_last
-        self.log_stamp_last = self.log_stamp
-        
-        if(log_stamp_det > 0.1):
-            new_line = ''   #'\r\n'
-        else:
-            new_line = ''
-        
-        # print(log_stamp_det)
-        
-        # stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-        # stamp = time.strftime("%H:%M:%S ", time.localtime())
-        stamp = ''
-        new_log_str = new_line + stamp + log
-        
-        self.log_stream << new_log_str << '\r\n'
-        self.ui_main.plainTextEdit_Log.appendPlainText(new_log_str)
-        # self.ui_main.plainTextEdit_Log.moveCursor(QTextCursor.End)
-        print(new_log_str)
-        pass
+        self.ui_main.plainTextEdit_Log.appendPlainText(log)
+        print(log)
     
     def init_ui(self):
         self.log('初始化 UI')
@@ -264,7 +235,7 @@ class IndoorLocation(QObject):
         ui.comboBox_name = PortComboBox()                                   # 用自己重写的控件替换被删的
         ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1)     # 添加到原来的布局框中相同位置
         
-        self.record_view_init_ui()
+        self.init_ui_record_view()
         
         self.slot_record_refresh()          # 更新记录目录下的文件
         
@@ -292,7 +263,7 @@ class IndoorLocation(QObject):
         
         self.slot_mode_changed()
     
-    def record_view_init_ui(self):
+    def init_ui_record_view(self):
         ui = self.ui_main
         
         # 删掉 Designer 生成的滑块 重写一个 占据相同的位置
@@ -314,6 +285,7 @@ class IndoorLocation(QObject):
         ui.label_view_max = QLabel('max:%d' %(self.record.view_max))
         
         ui.checkbox_graphic_all = QCheckBox('All')
+        ui.checkbox_graphic_track = QCheckBox('Track')
         
         # 高度固定
         ui.label_record_min.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
@@ -325,6 +297,7 @@ class IndoorLocation(QObject):
         ui.label_view_max.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         
         ui.checkbox_graphic_all.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        ui.checkbox_graphic_track.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         
         # 齐方式
         ui.label_record_min.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
@@ -344,6 +317,7 @@ class IndoorLocation(QObject):
         layout_record.addWidget(ui.label_record_max)
         
         layout_record_view.addWidget(ui.checkbox_graphic_all)
+        layout_record_view.addWidget(ui.checkbox_graphic_track)
         layout_record_view.addWidget(ui.label_view_min)
         layout_record_view.addWidget(ui.label_view_len)
         layout_record_view.addWidget(ui.label_view_max)
@@ -363,6 +337,10 @@ class IndoorLocation(QObject):
             self.ui_main.label_record_min.setText('min:%d' %(self.ui_main.horizontalScrollBar_Graphic.minimum()))
             
         self.ui_main.horizontalScrollBar_Graphic.setMaximum(record_len)
+        
+        if self.ui_main.checkbox_graphic_track.isChecked():
+            self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
+        
         self.ui_main.label_record_max.setText('max:%d' %(record_len))
     
     def update_record_value_and_label(self, min, idx, max):
@@ -430,7 +408,8 @@ class IndoorLocation(QObject):
         # ui.horizontalScrollBar_Graphic.actionTriggered.connect(             lambda:self.slot_griphic_scrollbar_action_trigged())
         
         ui.checkbox_graphic_all.stateChanged.connect(                       lambda sta:self.slot_checkbox_record_view_all_changed(sta))
-    
+        ui.checkbox_graphic_track.stateChanged.connect(                     lambda sta:self.slot_checkbox_record_view_track_changed(sta))
+
     # 更新需要动态显示的 UI 每 500ms 调用一次
     def update_dynamic_ui(self):
         if(self.record.is_recording):
@@ -439,60 +418,6 @@ class IndoorLocation(QObject):
                 self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_green.png'))
             elif(0 == self.ui_cnt_recording % 2):
                 self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_red.png'))
-    
-    def draw_ref_line(self):
-        x_s = [100, 300, 300, 100, 100]
-        y_s = [100, 100, 300, 300, 100]
-        
-        self.axes_2d_static.plot(x_s, y_s, '-', c='k', alpha=0.8, lw=1)
-        pass
-    
-    def draw_tag_point(self):
-        circle = plt.Circle((self.tag.x, self.tag.y), 3, color='c', ec='c', alpha=0.8, picker=5)
-        self.axes_2d_static.add_artist(circle)
-    
-    def draw_circle(self, x, y, r, c):
-        circle = plt.Circle((x, y), r, color=c, ec='c', alpha=0.2, picker=5)
-        self.axes_2d_static.add_artist(circle)
-    
-    def draw_distance_circles(self):
-        self.draw_circle(self.anchors[0].x, self.anchors[0].y, self.tag.d0, 'r')
-        self.draw_circle(self.anchors[1].x, self.anchors[1].y, self.tag.d1, 'g')
-        self.draw_circle(self.anchors[2].x, self.anchors[2].y, self.tag.d2, 'b')
-    
-    def draw_rssi_circles(self):
-        # self.draw_circle(self.anchors[0].x, self.anchors[0].y, self.tag.rssi_a0, 'gray')
-        # self.draw_circle(self.anchors[1].x, self.anchors[1].y, self.tag.rssi_a1, 'gray')
-        # self.draw_circle(self.anchors[2].x, self.anchors[2].y, self.tag.rssi_a2, 'gray')
-        
-        self.draw_circle(self.anchors[0].x, self.anchors[0].y, 100, 'gray')
-        self.draw_circle(self.anchors[1].x, self.anchors[1].y, 100, 'gray')
-        self.draw_circle(self.anchors[2].x, self.anchors[2].y, 100, 'gray')
-        pass
-    
-    def draw_anchor_to_anchor_line(self, anchor_0, anchor_1):
-        x0 = anchor_0['x']
-        y0 = anchor_0['y']
-        
-        x1 = anchor_1['x']
-        y1 = anchor_1['y']
-        
-        x_s = [x0, x1]
-        y_s = [y0, y1]
-        
-        self.axes_2d_static.plot(x_s, y_s, '-', c='c', alpha=0.3, lw=0.5)
-        pass
-    
-    def draw_anchor_points(self):
-        circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), radius=5, color='r', ec='c', alpha=1, picker=5)
-        self.axes_2d_static.add_artist(circle)
-        circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), radius=5, color='g', ec='c', alpha=1, picker=5)
-        self.axes_2d_static.add_artist(circle)
-        circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), radius=5, color='b', ec='c', alpha=1, picker=5)
-        self.axes_2d_static.add_artist(circle)
-    
-    def draw_Tag_to_3_Anchor_(self, d1, d2, d3):
-        pass
     
     def clear_display_2d_matplotlib(self):
         # self.log('清除当前显示')
@@ -503,30 +428,14 @@ class IndoorLocation(QObject):
     
     def slot_mode_changed(self):
         self.log('模式切换到 %s' %(self.ui_main.comboBox_Mode.currentText()))
-        
-        if('debug_rx' == self.ui_main.comboBox_Mode.currentText()):
-            self.clear_display_2d_matplotlib()
-            self.draw_anchor_points()
-            self.draw_distance_circles()
-            self.axes_2d_static.figure.canvas.draw()
-            pass
-        
-        elif('DongHan' == self.ui_main.comboBox_Mode.currentText()):
-            self.clear_display_2d_matplotlib()
-            self.draw_anchor_points()
-            self.axes_2d_static.figure.canvas.draw()
-            pass
-        elif('WangZeKun' == self.ui_main.comboBox_Mode.currentText()):
-            self.clear_display_2d_matplotlib()
-            self.draw_anchor_points()
-            self.draw_ref_line()
-            self.axes_2d_static.figure.canvas.draw()
-            pass
-        else:
-            pass
     
     def slot_record_start_stop(self):
         self.record.is_recording = not self.record.is_recording
+        
+        if self.record.is_recording:
+            self.ui_main.pushButton_RecordPlay.setEnabled(False)
+        else:
+            self.ui_main.pushButton_RecordPlay.setEnabled(True)
         
         # 记录开始
         if(self.record.is_recording):
@@ -538,7 +447,6 @@ class IndoorLocation(QObject):
             self.update_dynamic_ui()
             
             self.update_record_value_and_label(0, 0, 0)
-            
             self.ui_main.plainTextEdit_Hex.clear()
             
         # 记录结束
@@ -587,10 +495,28 @@ class IndoorLocation(QObject):
         
         self.ui_main.pushButton_RecordPlay.setEnabled(False)
         self.ui_main.pushButton_RecordDelete.setEnabled(False)
-        
     
     def slot_record_play(self):
         self.log('回放 %s' %(self.record.f_path_name))
+        df = pd.read_csv(self.record.f_path_name)   # <class 'pandas.core.frame.DataFrame'>
+        dc = df.to_dict()                           # <class 'dict'>
+        keys = dc.keys()
+        keys_list = list(keys)
+        num = len(dc[keys_list[0]])
+        
+        self.record.items_list = []
+        
+        for i in range(num):
+            self.record.item_dict = {}
+            for k in keys:
+                self.record.item_dict[k] = dc[k][i]
+            # print(self.record.item_dict)
+            self.record.items_list.append(copy.copy(self.record.item_dict))
+        
+        print('导入 CSV 成功')
+        
+        self.update_record_len_scrollbar_and_label()
+        self.update_record_view_scrollbar_and_label()
     
     def slot_record_delete(self):
         self.log('删除: %s' %(self.record.f_path_name))
@@ -605,7 +531,11 @@ class IndoorLocation(QObject):
     def slot_record_select(self, f_name):
         self.record.f_path_name = self.record.dir + r'/' + f_name
         self.log(self.record.f_path_name)
-        self.ui_main.pushButton_RecordPlay.setEnabled(True)
+        if self.record.is_recording:
+            self.ui_main.pushButton_RecordPlay.setEnabled(False)
+        else:
+            self.ui_main.pushButton_RecordPlay.setEnabled(True)
+            
         self.ui_main.pushButton_RecordDelete.setEnabled(True)
     
     def slot_griphic_scrollbar_ctrl_wheel(self, det):
@@ -661,12 +591,14 @@ class IndoorLocation(QObject):
         self.update_record_view_scrollbar_and_label()
         self.ui_main.label_record_idx.setText('idx:%d' %(val))
     def slot_griphic_scrollbar_slider_pressed(self):
-        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-        print('pressed:')
+        # print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+        # print('pressed:')
+        pass
     def slot_griphic_scrollbar_slider_released(self):
-        print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-        print('released:')
-        
+        # print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+        # print('released:')
+        pass
+    
     def slot_checkbox_record_view_all_changed(self, sta):
         if 0 == sta:    # 不选中
             self.ui_main.checkbox_graphic_all.setStyleSheet('background-color:rgb(240, 240, 240)')
@@ -674,6 +606,14 @@ class IndoorLocation(QObject):
             self.ui_main.checkbox_graphic_all.setStyleSheet('background-color:gray')
         
         self.update_record_view_scrollbar_and_label()
+    
+    def slot_checkbox_record_view_track_changed(self, sta):
+        if 0 == sta:    # 不选中
+            self.ui_main.checkbox_graphic_track.setStyleSheet('background-color:rgb(240, 240, 240)')
+        elif 2 == sta:  # 选中
+            self.ui_main.checkbox_graphic_track.setStyleSheet('background-color:gray')
+        
+        self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
         
     def slot_win_set_visibility_changed(self, visable):
         self.ui_main.action_ViewSet.setChecked(visable)
@@ -890,16 +830,16 @@ class IndoorLocation(QObject):
         if self.port.isopen:
             self.uart_rx_handle()
     
-    def update_uart_pkg_text_info(self, item_dict):
+    def update_record_text_info(self, item_dict):
         pkg_stamp = item_dict['stamp']
         
         pkg_info = ' T(%d, %d)' %(item_dict['x'], item_dict['y'])
         pkg_info += ' D(%d, %d, %d)' %(item_dict['d0'], item_dict['d1'], item_dict['d2'])
         pkg_info += ' R(%d, %d, %d)' %(item_dict['r0'], item_dict['r1'], item_dict['r2'])
         
-        pkg_raw = ''
-        for v in item_dict['raw']:
-            pkg_raw += ' %02X' %(v)
+        pkg_raw = item_dict['raw']
+        # for v in item_dict['raw']:
+        #     pkg_raw += ' %02X' %(v)
         
         pkg_str = pkg_stamp + pkg_info + pkg_raw
         self.ui_main.plainTextEdit_Hex.appendPlainText(pkg_str)
@@ -943,7 +883,7 @@ class IndoorLocation(QObject):
                             port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
                             
                             self.update_record_item_dict()
-                            self.update_uart_pkg_text_info(self.record.item_dict)   # copy.copy(...)
+                            self.update_record_text_info(self.record.item_dict)   # copy.copy(...)
                             
                             if(self.record.is_recording):
                                 self.record.push_new_item()
@@ -957,71 +897,77 @@ class IndoorLocation(QObject):
                 print('串口异常')
                 print(e)
     
-    def draw_a_pkg(self, idx):
-        # # 显示解析后的包信息
-        # str_pkg_info = ''
-        
-        # if idx < len(self.tags):
-        #     tag_pkg = self.tags[idx]
-            
-        #     str_pkg_info += tag_pkg.stamp
-        #     str_pkg_info += ' P(%+3d, %+3d)' %(tag_pkg.x, tag_pkg.y)
-        #     str_pkg_info += ' D(%3d, %3d, %3d)' %(tag_pkg.d0, tag_pkg.d1, tag_pkg.d2)
-        #     str_pkg_info += ' R(%+3d, %+3d, %+3d)' %(tag_pkg.rssi_a0, tag_pkg.rssi_a1, tag_pkg.rssi_a2)
-        #     # print('设置包信息', str_pkg_info, time.time())
-        #     self.ui_main.lineEdit_PkgInfo.setText(str_pkg_info)
-            
-        #     # # 开始图形化
-        #     # self.clear_display_2d_matplotlib()
-            
-        #     # draw tag_pkg point
-        #     circle = plt.Circle((tag_pkg.x, tag_pkg.y), 3, color='c', ec='c', alpha=0.8, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-            
-        #     # draw anchors points
-        #     circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), radius=5, color='r', ec='c', alpha=1, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-        #     circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), radius=5, color='g', ec='c', alpha=1, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-        #     circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), radius=5, color='b', ec='c', alpha=1, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-            
-        #     # draw distance circles
-        #     circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), tag_pkg.d0, color='r', ec='c', alpha=0.2, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-        #     circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), tag_pkg.d1, color='g', ec='c', alpha=0.2, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-        #     circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), tag_pkg.d2, color='b', ec='c', alpha=0.2, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-            
-        #     # draw rssi circle
-        #     circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), tag_pkg.rssi_a0, color='gray', ec='c', alpha=0.2, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-        #     circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), tag_pkg.rssi_a1, color='gray', ec='c', alpha=0.2, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-        #     circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), tag_pkg.rssi_a2, color='gray', ec='c', alpha=0.2, picker=5)
-        #     self.axes_2d_static.add_artist(circle)
-            
-        #     # circle = plt.Circle((self.anchors[0].x, self.anchors[0].y), 100, color='gray', ec='c', alpha=0.2, picker=5)
-        #     # self.axes_2d_static.add_artist(circle)
-        #     # circle = plt.Circle((self.anchors[1].x, self.anchors[1].y), 100, color='gray', ec='c', alpha=0.2, picker=5)
-        #     # self.axes_2d_static.add_artist(circle)
-        #     # circle = plt.Circle((self.anchors[2].x, self.anchors[2].y), 100, color='gray', ec='c', alpha=0.2, picker=5)
-        #     # self.axes_2d_static.add_artist(circle)
-            
-        #     # self.axes_2d_static.figure.canvas.draw()
-        pass
-    
     def update_record_graphic(self):
-        # if self.drawing_idx < len(self.tags):
-        #     # 取出数据包
-        #     if self.drawing_auto and self.port.isopen:
-        #         # 开始图形化
-        #         self.clear_display_2d_matplotlib()
-        #         self.draw_a_pkg(self.drawing_idx)
-        #         self.axes_2d_static.figure.canvas.draw()
-        #         self.drawing_idx += 1
-        pass
+        if (self.drawing_end != self.record.view_max) or (self.drawing_len != self.record.view_len):
+            
+            # 清除当前绘图
+            self.clear_display_2d_matplotlib()
+            
+            if self.record.view_len > 0:
+                # 取出需要绘制的数据包
+                records = self.record.items_list[self.record.view_min-1 : self.record.view_max]   # 需要绘制的所有记录
+                record = self.record.items_list[self.record.view_max - 1]                       # 需要绘制的最后一条记录
+            
+                # 绘制所有记录中 标签位置点
+                for i in range(self.record.view_len):
+                    # print('i=%d (%d ~ %d)' %(i, self.record.view_min-1, self.record.view_max-1))
+                    # a = (1.0 - 0.1) * i / (self.drawing_len + 1.0) + 0.1
+                    circle = plt.Circle((records[i]['x'], records[i]['y']), radius=3, color='c', ec='c', alpha=1.0, picker=5)
+                    self.axes_2d_static.add_artist(circle)
+                
+                # 更新数据包内容文本
+                self.update_record_text_info(record)
+                
+                # 绘制最后一条记录中 基站位置
+                if 'stamp' in record:
+                    print('有时间戳')
+                else:
+                    print('没有时间戳')
+                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=5, color='r', ec='c', alpha=0.5, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=5, color='g', ec='c', alpha=0.5, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=5, color='b', ec='c', alpha=0.5, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                
+                # 绘制最后一条记录中 距离圆
+                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=record['d0'], color='r', ec='c', alpha=0.1, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=record['d1'], color='g', ec='c', alpha=0.1, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=record['d2'], color='b', ec='c', alpha=0.1, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                
+                # 绘制最后一条记录中 信号圆
+                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=record['r0'], color='gray', ec='c', alpha=0.1, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=record['r1'], color='gray', ec='c', alpha=0.1, picker=5)
+                self.axes_2d_static.add_artist(circle)
+                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=record['r2'], color='gray', ec='c', alpha=0.1, picker=5)
+                
+                # 绘制最后一条记录中 参考
+                '''
+                x_s = [100, 300, 300, 100, 100]
+                y_s = [100, 100, 300, 300, 100]
+                self.axes_2d_static.plot(x_s, y_s, '-', c='k', alpha=0.8, lw=1)
+                '''
+                
+                # Circle(xy, radius=5, **kwargs)
+                circle = mpatches.Circle((300, 300), 50, ec='blue', fc='red', alpha=0.5, picker=5)
+                self.axes_2d_static.add_patch(circle)
+                
+                # Rectangle(xy, width, height, angle=0.0, **kwargs)
+                rectangle = mpatches.Rectangle(xy=(0, 0), width=250, height=100, angle=10.0, ec='blue', fc='red', alpha=0.5, picker=5)
+                self.axes_2d_static.add_patch(rectangle)
+                
+                # Line2D(xdata, ydata, linewidth=None, linestyle=None, color=None, marker=None, markersize=None, markeredgewidth=None, markeredgecolor=None, markerfacecolor=None, markerfacecoloralt='none', fillstyle=None, antialiased=None, dash_capstyle=None, solid_capstyle=None, dash_joinstyle=None, solid_joinstyle=None, pickradius=5, drawstyle=None, markevery=None, **kwargs)
+                line = mlines.Line2D([0, 100, 200, 300], [50, 80, 200, 100], linewidth=5)
+                self.axes_2d_static.add_artist(line)
+                
+            self.axes_2d_static.figure.canvas.draw()    # 重新绘制
+            
+            self.drawing_end = self.record.view_max
+            self.drawing_len = self.record.view_len
 
 if __name__ == '__main__':
     app = QApplication([])

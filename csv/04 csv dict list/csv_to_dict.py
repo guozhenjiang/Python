@@ -15,16 +15,20 @@ def time_stamp_ms():
 # 
 def csv_to_dict_01(file):
     df = pd.read_csv(file)      # DataFrame
-    print(type(df))
-    print(df)                   # <class 'pandas.core.frame.DataFrame'>
+    # print(type(df))
+    # print(df)                   # <class 'pandas.core.frame.DataFrame'>
     
     dc = df.to_dict()
-    print(type(dc))             # <class 'dict'>
-    print(dc)
+    # print(type(dc))             # <class 'dict'>
+    # print(dc)
     
     keys = dc.keys()
     print(keys)
-    data_dict_len = len(dc)
+    keys_list = list(keys)
+    print(keys_list[0])
+    
+    # data_dict_len = len(dc)
+    data_dict_len = len(dc[keys_list[0]])
     
     print(data_dict_len)
     
@@ -32,8 +36,10 @@ def csv_to_dict_01(file):
         print()
         for k in keys:
             print(dc[k][i],'(', type(dc[k][i]), ')', end=' ')
+    
+    print('\r\n 结束')
 
 print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
 print()
 
-csv_to_dict_01('./csv_to_dict 01.csv')
+csv_to_dict_01('./csv_to_dict 02.csv')
