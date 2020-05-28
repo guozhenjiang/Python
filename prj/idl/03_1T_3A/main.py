@@ -28,6 +28,8 @@ import matplotlib.patches as mpatches
 
 import csv
 import pandas as pd
+
+from enum import Enum
 # endregion
 
 # region 基本公共方法
@@ -54,6 +56,12 @@ def dict_to_csv(data_dicts, file):
             w.writerow(data_dicts[0])
 #endregion
 
+class GraphicLayer(Enum):
+    default = 1
+    anchor = 2
+    tag = 3
+    
+
 class Anchor():
     def __init__(self, id, x, y, z):
         self.id = id
@@ -65,16 +73,6 @@ class Anchor():
         
     def show(self):
         print('A%02d(%+4d, %+4d, %+4d)' %(self.id, self.x, self.y, self.z))
-
-class Tag():
-    def __init__(self):
-        super().__init__()
-        self.id = 0      # 便签编号
-        self.d = []      # 标签和基站的距离
-        self.r = []      # 标签和基站的信号强度
-        self.x = 0
-        self.y = 0
-        self.z = 0
 
 class Record():
     def __init__(self):
@@ -98,7 +96,13 @@ class Record():
     
     def len(self):
         return len(self.items_list)
-    
+
+class Map():
+    def __init__(self):
+        self.dir = './map'
+        self.f_path_name = ''
+        self.dict = {}
+
 class Pkg_1T3A():
     '''
     Kingfar协议: https://docs.qq.com/sheet/DTExxWE9BZ0draFNY?tab=q9au4t&c=A1A0A0
@@ -186,6 +190,7 @@ class IndoorLocation(QObject):
     def __init__(self):
         self.record = Record()                              # 数据记录
         self.ui_cnt_recording = 0
+        self.map = Map()
         
         log_file_loc = './log.txt'
         print('以读写打开 %s' %(log_file_loc))
@@ -231,6 +236,11 @@ class IndoorLocation(QObject):
         self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
         self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))
         
+        self.ui_main.pushButton_MapRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))
+        self.ui_main.pushButton_MapImport.setIcon(QtGui.QPixmap(r'.\ico\import_100x100.png'))
+        self.ui_main.pushButton_MapDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_128x128.png'))
+        self.ui_main.pushButton_MapDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
+        
         ui.comboBox_name_raw.deleteLater()                                  # 删掉 UI 生成的端口选择下拉框控件
         ui.comboBox_name = PortComboBox()                                   # 用自己重写的控件替换被删的
         ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1)     # 添加到原来的布局框中相同位置
@@ -238,6 +248,7 @@ class IndoorLocation(QObject):
         self.init_ui_record_view()
         
         self.slot_record_refresh()          # 更新记录目录下的文件
+        self.slot_map_refresh()             # 更新地图目录下的文件
         
         # 将 Matlabplotlib 2D 图像嵌入界面
         # layout = self.ui_main.horizontalLayout_2D          # <class 'PySide2.QtWidgets.QHBoxLayout'>
@@ -392,11 +403,15 @@ class IndoorLocation(QObject):
         ui.pushButton_RecordStart.clicked.connect(                          lambda:self.slot_record_start_stop())
         ui.pushButton_RecordSave.clicked.connect(                           lambda:self.slot_record_save())
         ui.pushButton_RecordRefresh.clicked.connect(                        lambda:self.slot_record_refresh())
+        ui.pushButton_MapRefresh.clicked.connect(                           lambda:self.slot_map_refresh())
         ui.pushButton_RecordPlay.clicked.connect(                           lambda:self.slot_record_play())
         ui.pushButton_RecordDelete.clicked.connect(                         lambda:self.slot_record_delete())
         ui.pushButton_RecordDir.clicked.connect(                            lambda:self.slot_record_open_dir())
+        ui.pushButton_MapDir.clicked.connect(                               lambda:self.slot_map_open_dir())
+        ui.pushButton_MapImport.clicked.connect(                            lambda:self.slot_map_import_dir())
         
         ui.listWidget_RecordFiles.currentTextChanged.connect(               lambda f_name:self.slot_record_select(f_name))
+        ui.listWidget_MapFiles.currentTextChanged.connect(                  lambda f_name:self.slot_map_select(f_name))
         
         # 滚动条信号与槽
         ui.horizontalScrollBar_Graphic.signal_scrollbar_ctrl_wheel.connect( lambda det:self.slot_griphic_scrollbar_ctrl_wheel(det))     # Ctrl + Wheel
@@ -495,6 +510,24 @@ class IndoorLocation(QObject):
         
         self.ui_main.pushButton_RecordPlay.setEnabled(False)
         self.ui_main.pushButton_RecordDelete.setEnabled(False)
+        
+    def slot_map_refresh(self):
+        # f_name, f_filter = QFileDialog.getOpenFileName(self.ui_main, '选择单个文件', './', '筛选条件(*.jpg *.png *.bmp)')
+        # print(f_name)
+        
+        # f_names, f_filter = QFileDialog.getOpenFileNames(self.ui_main, '选择单个或多个文件', './', '筛选条件(*.jpg *.png *.bmp)')
+        # print(f_names)
+        
+        self.log('刷新: %s' %(self.map.dir))
+        self.ui_main.lineEdit_MapDir.setText(self.map.dir)
+        
+        # fs = os.listdir(f_path)                                                                           # 列出路径下所有的文件和文件夹
+        fs = [f for f in os.listdir(self.map.dir) if os.path.isfile(os.path.join(self.map.dir, f))]   # 只列出文件
+        self.ui_main.listWidget_MapFiles.clear()
+        self.ui_main.listWidget_MapFiles.addItems(fs)
+        
+        self.ui_main.pushButton_MapImport.setEnabled(False)
+        self.ui_main.pushButton_MapDelete.setEnabled(False)
     
     def slot_record_play(self):
         self.log('回放 %s' %(self.record.f_path_name))
@@ -528,6 +561,76 @@ class IndoorLocation(QObject):
         self.ui_main.lineEdit_RecordDir.setText(self.record.dir)
         self.slot_record_refresh()
     
+    def slot_map_open_dir(self):
+        self.map.dir = QFileDialog.getExistingDirectory(self.ui_main, '选择记录文件路径', self.map.dir)
+        self.ui_main.lineEdit_RecordDir.setText(self.map.dir)
+        self.slot_map_refresh()
+    
+    def slot_map_import_dir(self):
+        # 清除绘图
+        self.clear_display_2d_matplotlib()
+        
+        # 打开地图文件
+        with open(self.map.f_path_name, encoding='utf-8') as f_map:
+            map_str = f_map.read()
+        self.map.dict = eval(map_str)
+        self.draw_map(self.map.dict)
+        
+        # 重新绘图
+        self.axes_2d_static.figure.canvas.draw()
+    
+    def draw_map(self, map):
+        if 'type' in map:
+            self.log('%s 地图' %(map['type']))
+            
+            if 'anchors' in map:
+                self.log('加载基站信息')
+                anchors = map['anchors']
+                for i in range(len(anchors['coordinates'])):
+                    id = '%s' %(i)
+                    x, y = anchors['coordinates'][i]
+                    c = anchors['color']
+                    ec = anchors['ec']
+                    
+                    circle = plt.Circle(xy=(x, y), radius=15, color=c, ec=ec, alpha=1, picker=5)
+                    circle.set_zorder(2)
+                    self.axes_2d_static.annotate(id, xy=(x, y), fontsize=8, ha='center', va='center')
+                    self.axes_2d_static.add_artist(circle)
+            
+            if 'lines' in map:
+                self.log('加载参照物 直线')
+                lines = map['lines']
+                for l in lines:
+                    print(l)
+                    xs = []
+                    ys = []
+                    w = lines[l]['width']
+                    c = lines[l]['color']
+                    
+                    for xy in lines[l]['coordinates']:
+                        x, y = xy
+                        xs.append(x)
+                        ys.append(y)
+                    # Line2D(xdata, ydata, linewidth=None, linestyle=None, color=None, marker=None, markersize=None, markeredgewidth=None, markeredgecolor=None, markerfacecolor=None, markerfacecoloralt='none', fillstyle=None, antialiased=None, dash_capstyle=None, solid_capstyle=None, dash_joinstyle=None, solid_joinstyle=None, pickradius=5, drawstyle=None, markevery=None, **kwargs)
+                    line = mlines.Line2D(xs, ys, linewidth=w, color=c, alpha=0.5)
+                    self.axes_2d_static.add_artist(line)
+                
+            if 'rectangles' in map:
+                self.log('加载参照物 矩形')
+                rectangles = map['rectangles']
+                
+                for k in rectangles.keys():
+                    self.log(k)
+                    x, y, w, h, c, ec, a = rectangles[k]
+                    print(x, y)
+                    
+                    rectangle = mpatches.Rectangle(xy=(x, y), width=w, height=h, angle=a, ec=ec, fc=c, alpha=0.5, picker=5)
+                    # rectangle.set_zorder(2)
+                    # self.axes_2d_static.annotate(k, xy=(x, y), fontsize=8, ha='center', va='center')
+                    self.axes_2d_static.add_patch(rectangle)
+        else:
+            self.log('无法正确加载地图，请检查地图文件格式')
+            
     def slot_record_select(self, f_name):
         self.record.f_path_name = self.record.dir + r'/' + f_name
         self.log(self.record.f_path_name)
@@ -537,6 +640,13 @@ class IndoorLocation(QObject):
             self.ui_main.pushButton_RecordPlay.setEnabled(True)
             
         self.ui_main.pushButton_RecordDelete.setEnabled(True)
+    
+    def slot_map_select(self, f_name):
+        self.map.f_path_name = self.map.dir + r'/' + f_name
+        self.log(self.map.f_path_name)
+        
+        self.ui_main.pushButton_MapImport.setEnabled(True)
+        self.ui_main.pushButton_MapDelete.setEnabled(True)
     
     def slot_griphic_scrollbar_ctrl_wheel(self, det):
         if det > 0:
@@ -911,31 +1021,22 @@ class IndoorLocation(QObject):
                 # 绘制所有记录中 标签位置点
                 for i in range(self.record.view_len):
                     # print('i=%d (%d ~ %d)' %(i, self.record.view_min-1, self.record.view_max-1))
-                    # a = (1.0 - 0.1) * i / (self.drawing_len + 1.0) + 0.1
-                    circle = plt.Circle((records[i]['x'], records[i]['y']), radius=3, color='c', ec='c', alpha=1.0, picker=5)
+                    a = 1.0 / self.record.view_len * i
+                    circle = plt.Circle((records[i]['x'], records[i]['y']), radius=3, color='c', ec='c', alpha=a, picker=5)
                     self.axes_2d_static.add_artist(circle)
                 
                 # 更新数据包内容文本
                 self.update_record_text_info(record)
                 
-                # 绘制最后一条记录中 基站位置
-                if 'stamp' in record:
-                    print('有时间戳')
-                else:
-                    print('没有时间戳')
-                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=5, color='r', ec='c', alpha=0.5, picker=5)
-                self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=5, color='g', ec='c', alpha=0.5, picker=5)
-                self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=5, color='b', ec='c', alpha=0.5, picker=5)
-                self.axes_2d_static.add_artist(circle)
+                # 绘制地图
+                self.draw_map(self.map.dict)
                 
                 # 绘制最后一条记录中 距离圆
-                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=record['d0'], color='r', ec='c', alpha=0.1, picker=5)
+                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=record['d0'], color='#FF0000', ec='c', alpha=0.2, picker=5)
                 self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=record['d1'], color='g', ec='c', alpha=0.1, picker=5)
+                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=record['d1'], color='g', ec='c', alpha=0.2, picker=5)
                 self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=record['d2'], color='b', ec='c', alpha=0.1, picker=5)
+                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=record['d2'], color='b', ec='c', alpha=0.2, picker=5)
                 self.axes_2d_static.add_artist(circle)
                 
                 # 绘制最后一条记录中 信号圆
@@ -944,25 +1045,6 @@ class IndoorLocation(QObject):
                 circle = plt.Circle((record['a1.x'], record['a1.y']), radius=record['r1'], color='gray', ec='c', alpha=0.1, picker=5)
                 self.axes_2d_static.add_artist(circle)
                 circle = plt.Circle((record['a2.x'], record['a2.y']), radius=record['r2'], color='gray', ec='c', alpha=0.1, picker=5)
-                
-                # 绘制最后一条记录中 参考
-                '''
-                x_s = [100, 300, 300, 100, 100]
-                y_s = [100, 100, 300, 300, 100]
-                self.axes_2d_static.plot(x_s, y_s, '-', c='k', alpha=0.8, lw=1)
-                '''
-                
-                # Circle(xy, radius=5, **kwargs)
-                circle = mpatches.Circle((300, 300), 50, ec='blue', fc='red', alpha=0.5, picker=5)
-                self.axes_2d_static.add_patch(circle)
-                
-                # Rectangle(xy, width, height, angle=0.0, **kwargs)
-                rectangle = mpatches.Rectangle(xy=(0, 0), width=250, height=100, angle=10.0, ec='blue', fc='red', alpha=0.5, picker=5)
-                self.axes_2d_static.add_patch(rectangle)
-                
-                # Line2D(xdata, ydata, linewidth=None, linestyle=None, color=None, marker=None, markersize=None, markeredgewidth=None, markeredgecolor=None, markerfacecolor=None, markerfacecoloralt='none', fillstyle=None, antialiased=None, dash_capstyle=None, solid_capstyle=None, dash_joinstyle=None, solid_joinstyle=None, pickradius=5, drawstyle=None, markevery=None, **kwargs)
-                line = mlines.Line2D([0, 100, 200, 300], [50, 80, 200, 100], linewidth=5)
-                self.axes_2d_static.add_artist(line)
                 
             self.axes_2d_static.figure.canvas.draw()    # 重新绘制
             

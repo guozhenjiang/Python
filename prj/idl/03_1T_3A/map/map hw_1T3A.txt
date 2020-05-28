@@ -1,0 +1,32 @@
+{
+
+# 地图类型: 2d/3d
+'type':'2d',
+'date':'2020-05-28 20:10:49',
+
+# 							zorder	color	alpha
+'default_cfg':{	'map':(		1,		'gray', 0.6),
+				'distance':(2,		'c',	0.1),
+				'rssi':(	3,		'gray',	0.1),
+				'tag':(		4,		'c',	1.0),
+				'anchor':(	5,		'w',	1.0)	},
+
+# 基站: coordinates(x, y)
+'anchors'		:{	'coordinates'	:[(0, 0), (0, 300), (300, 0)],
+					'color'			:'w',
+					'ec'			:'k'	},
+
+# 直线 (x, y) color width
+'lines'			:{	'root'	:{	'coordinates'	:[(0,0), (6770, 0), (6770, 9010), (0, 9010), (0, 0)],
+								'width'			:5,
+								'color'			:'blue'	},
+					'test'	:{	'coordinates'	:[(-10, -10), (300, 79)],
+								'width'			:10,
+								'color'			:'red'	}								},
+
+# 矩形 (x, y, width, height, color, edge_color, angle)
+'rectangles'	:{	'table_1':(0,	0,		50,		100,	'red',		'blue',		0.0),
+					'table_3':(12,	66,		40,		80,		'yellow',	'#000000',	0.0),
+					'table_2':(100, 150,	300,	50,		'#000000',	'#000000',	15.0)		}
+
+}
