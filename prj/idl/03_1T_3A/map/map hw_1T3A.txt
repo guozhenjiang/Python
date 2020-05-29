@@ -18,10 +18,10 @@
 'size':(677,    901,    0.1),
 
 # 基站
-#                        (x, y) [Color EdgeColor]
-'anchors':{ '0':{   'xy':(0, 0),    'c':'r',    'ec':'k'    },
-            '1':{   'xy':(300, 0),  'c':'g',    'ec':'k'    },
-            '2':{   'xy':(0, 300),  'c':'b',    'ec':'k'    }   },
+#           id       (x, y) [Color EdgeColor]
+'anchors':{ 0:{ 'xy':(0, 0),    'c':'r',    'ec':'k'    },
+            1:{ 'xy':(300, 0),  'c':'g',    'ec':'k'    },
+            2:{ 'xy':(0, 300),  'c':'b',    'ec':'k'    }   },
 
 # 直线
 #                             (x, y) [Width Color]

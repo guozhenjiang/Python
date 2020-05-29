@@ -56,24 +56,6 @@ def dict_to_csv(data_dicts, file):
             w.writerow(data_dicts[0])
 #endregion
 
-class GraphicLayer(Enum):
-    default = 1
-    anchor = 2
-    tag = 3
-    
-
-class Anchor():
-    def __init__(self, id, x, y, z):
-        self.id = id
-        self.x = x
-        self.y = y
-        self.z = z
-        
-        self.show()
-        
-    def show(self):
-        print('A%02d(%+4d, %+4d, %+4d)' %(self.id, self.x, self.y, self.z))
-
 class Record():
     def __init__(self):
         self.dir = './record'       # 记录文件保存路径
@@ -169,54 +151,23 @@ class CustomQScrollBar(QScrollBar):
             
             self.signal_scrollbar_ctrl_wheel.emit(event.delta() / 120)
             
-        if modifiers == QtCore.Qt.ShiftModifier:
-            # print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-            # print('Shift + Wheel:', event.delta())
-            pass
+        # if modifiers == QtCore.Qt.ShiftModifier:
+        #     print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
+        #     print('Shift + Wheel:', event.delta())
             
 class IndoorLocation(QObject):
-    # region 基站
-    anchors = []
-    anchors.append(Anchor(0, 0, 0, 200))
-    anchors.append(Anchor(1, 0, 200, 0))
-    anchors.append(Anchor(2, 200, 0, 0))
-    # endregion
-    
-    new_pkg = Pkg_1T3A()
-    
-    drawing_end = 0
-    drawing_len = 0
-    
     def __init__(self):
-        self.record = Record()                              # 数据记录
-        self.ui_cnt_recording = 0
-        self.map = Map()
-        
-        log_file_loc = './log.txt'
-        print('以读写打开 %s' %(log_file_loc))
-        log_file = QFile(log_file_loc)
-        log_file.open(QFile.ReadWrite | QFile.Truncate)
-        
-        self.log_stamp_last = time.perf_counter()
-        self.log_stream = QTextStream(log_file)
-        self.log_stream.setCodec('UTF-8')
-        self.log_stream.seek(log_file.size())
-        
-        file_loc_ui_main = './ui_main_1T_nA.ui'
-        self.ui_main = QUiLoader().load(file_loc_ui_main)
-        self.log('载入 %s' %(file_loc_ui_main))
-        self.port = Port()                              # 实例化
+        self.map = Map()                # 地图信息
+        self.port = Port()              # 占用的端口
+        self.new_pkg = Pkg_1T3A()       # 串口数据包解析缓存
+        self.record = Record()          # 数据记录
+        self.drawed_end = 0             # 图形化状态
+        self.drawed_len = 0
+        self.ui_cnt_recording = 0       # 动态界面变化控制 记录中按钮图标
         
         # 初始化
         self.init_ui()
-        
-        for i in range(len(self.anchors)):
-            self.ui_main.tableWidget_DataInfo.setItem(i, 0, QTableWidgetItem(str(self.anchors[i].x)))
-            self.ui_main.tableWidget_DataInfo.setItem(i, 1, QTableWidgetItem(str(self.anchors[i].y)))
-            self.ui_main.tableWidget_DataInfo.setItem(i, 2, QTableWidgetItem(str(self.anchors[i].z)))
-        
         self.init_signal_slot()
-        self.slot_PortComboBox_showPopup()
     
     # Log 功能
     def log(self, log):
@@ -224,121 +175,109 @@ class IndoorLocation(QObject):
         print(log)
     
     def init_ui(self):
-        self.log('初始化 UI')
-        ui = self.ui_main
+        f_ui_main = './ui_main_1T_nA.ui'
+        self.ui_main = QUiLoader().load(f_ui_main)
+        self.log('加载界面文件 %s' %(f_ui_main))
         
-        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_256x256.png'))
-        
-        self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_128x128_red_dot.png'))
+        self.log('初始化图标')
+        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_256x256.png'))                            # 窗口图标
+        self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_128x128_red_dot.png'))     # Record
         self.ui_main.pushButton_RecordSave.setIcon(QtGui.QPixmap(r'.\ico\save_256x256.png'))
         self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play_256x256.png'))
         self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_128x128.png'))
         self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
         self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))
-        
-        self.ui_main.pushButton_MapRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))
+        self.ui_main.pushButton_MapRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))             # Map
         self.ui_main.pushButton_MapImport.setIcon(QtGui.QPixmap(r'.\ico\import_100x100.png'))
         self.ui_main.pushButton_MapDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_128x128.png'))
         self.ui_main.pushButton_MapDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
         
-        ui.comboBox_name_raw.deleteLater()                                  # 删掉 UI 生成的端口选择下拉框控件
-        ui.comboBox_name = PortComboBox()                                   # 用自己重写的控件替换被删的
-        ui.gridLayout_port_set_select.addWidget(ui.comboBox_name, 0, 1)     # 添加到原来的布局框中相同位置
+        self.log('加载自定义控件 端口选择')
+        self.ui_main.comboBox_name_raw.deleteLater()                                  # 删掉 UI 生成的端口选择下拉框控件
+        self.ui_main.comboBox_name = PortComboBox()                                   # 用自己重写的控件替换被删的
+        self.ui_main.gridLayout_port_set_select.addWidget(self.ui_main.comboBox_name, 0, 1)     # 添加到原来的布局框中相同位置
+        self.slot_PortComboBox_showPopup()
         
+        self.log('更新界面 记录')
         self.init_ui_record_view()
-        
         self.slot_record_refresh()          # 更新记录目录下的文件
         self.slot_map_refresh()             # 更新地图目录下的文件
         
-        # 将 Matlabplotlib 2D 图像嵌入界面
-        # layout = self.ui_main.horizontalLayout_2D          # <class 'PySide2.QtWidgets.QHBoxLayout'>
-        
+        self.log('嵌入图形化控件 Matlabplotlib 2D')
         self.canvas_2d_matplotlib = FigureCanvas(Figure())  # <class 'matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg'>
-        ui.horizontalLayout_2D.addWidget(self.canvas_2d_matplotlib)
-        
+        self.ui_main.horizontalLayout_2D.addWidget(self.canvas_2d_matplotlib)
         self.axes_2d_static = self.canvas_2d_matplotlib.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
         self.axes_2d_static.grid(True)
         
-        self.update_2d_matplotlib_limit()
-        
-        # 将 Matlabplotlib 3D 图像嵌入界面
-        # self.canvas_3d_matplotlib = FigureCanvas(Figure())      # <class 'matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg'>
-        self.canvas_3d_matplotlib = FigureCanvas(Figure())
-        ui.horizontalLayout_3D_Matplotlib.addWidget(self.canvas_3d_matplotlib)
-        self.axes_3d_static = self.canvas_3d_matplotlib.figure.subplots()   # <class 'matplotlib.axes._subplots.AxesSubplot'>
-        self.axes_3d_static.grid(True)
-        
         # 添加 matplotlib 工具栏是有效的 只不过添加后部分功能没有
-        # self.ui_main.toolbar = NavigationToolbar(self.canvas_3d_matplotlib, self.ui_main)
-        # self.ui_main.verticalLayout_2D_Matplotlib.addWidget(self.ui_main.toolbar)
+        self.ui_main.toolbar = NavigationToolbar(self.canvas_2d_matplotlib, self.ui_main)
+        self.ui_main.verticalLayout_2D_Matplotlib.addWidget(self.ui_main.toolbar)
         
         self.slot_mode_changed()
     
     def init_ui_record_view(self):
-        ui = self.ui_main
-        
         # 删掉 Designer 生成的滑块 重写一个 占据相同的位置
-        ui.horizontalScrollBar_GraphicRaw.deleteLater()
-        ui.horizontalScrollBar_Graphic = CustomQScrollBar(Qt.Horizontal)
-        ui.horizontalScrollBar_Graphic.setPageStep(1)
-        ui.horizontalScrollBar_Graphic.setSingleStep(1)
+        self.ui_main.horizontalScrollBar_GraphicRaw.deleteLater()
+        self.ui_main.horizontalScrollBar_Graphic = CustomQScrollBar(Qt.Horizontal)
+        self.ui_main.horizontalScrollBar_Graphic.setPageStep(1)
+        self.ui_main.horizontalScrollBar_Graphic.setSingleStep(1)
         
         # record label
-        ui.label_record_min = QLabel('min:0')       # 最小是 0 表示没有收到数据包
-        ui.label_record_idx = QLabel('idx:0')
-        ui.label_record_max = QLabel('max:0')
+        self.ui_main.label_record_min = QLabel('min:0')       # 最小是 0 表示没有收到数据包
+        self.ui_main.label_record_idx = QLabel('idx:0')
+        self.ui_main.label_record_max = QLabel('max:0')
         
         self.update_record_value_and_label(0, 0, 0)
         
         # record_view label
-        ui.label_view_min = QLabel('min:%d' %(self.record.view_min))
-        ui.label_view_len = QLabel('len:%d(%d)' %(self.record.view_len, self.record.view_len_set))
-        ui.label_view_max = QLabel('max:%d' %(self.record.view_max))
+        self.ui_main.label_view_min = QLabel('min:%d' %(self.record.view_min))
+        self.ui_main.label_view_len = QLabel('len:%d(%d)' %(self.record.view_len, self.record.view_len_set))
+        self.ui_main.label_view_max = QLabel('max:%d' %(self.record.view_max))
         
-        ui.checkbox_graphic_all = QCheckBox('All')
-        ui.checkbox_graphic_track = QCheckBox('Track')
+        self.ui_main.checkbox_graphic_all = QCheckBox('All')
+        self.ui_main.checkbox_graphic_track = QCheckBox('Track')
         
         # 高度固定
-        ui.label_record_min.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        ui.label_record_idx.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        ui.label_record_max.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.label_record_min.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.label_record_idx.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.label_record_max.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         
-        ui.label_view_min.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        ui.label_view_len.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        ui.label_view_max.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.label_view_min.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.label_view_len.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.label_view_max.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         
-        ui.checkbox_graphic_all.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        ui.checkbox_graphic_track.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.checkbox_graphic_all.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.ui_main.checkbox_graphic_track.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         
         # 齐方式
-        ui.label_record_min.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        ui.label_record_idx.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
-        ui.label_record_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        self.ui_main.label_record_min.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        self.ui_main.label_record_idx.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        self.ui_main.label_record_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         
-        ui.label_view_min.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        ui.label_view_len.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
-        ui.label_view_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        self.ui_main.label_view_min.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        self.ui_main.label_view_len.setAlignment(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
+        self.ui_main.label_view_max.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         
         # record label 水平布局
         layout_record = QtWidgets.QHBoxLayout()
         layout_record_view = QtWidgets.QHBoxLayout()
         
-        layout_record.addWidget(ui.label_record_min)
-        layout_record.addWidget(ui.label_record_idx)
-        layout_record.addWidget(ui.label_record_max)
+        layout_record.addWidget(self.ui_main.label_record_min)
+        layout_record.addWidget(self.ui_main.label_record_idx)
+        layout_record.addWidget(self.ui_main.label_record_max)
         
-        layout_record_view.addWidget(ui.checkbox_graphic_all)
-        layout_record_view.addWidget(ui.checkbox_graphic_track)
-        layout_record_view.addWidget(ui.label_view_min)
-        layout_record_view.addWidget(ui.label_view_len)
-        layout_record_view.addWidget(ui.label_view_max)
+        layout_record_view.addWidget(self.ui_main.checkbox_graphic_all)
+        layout_record_view.addWidget(self.ui_main.checkbox_graphic_track)
+        layout_record_view.addWidget(self.ui_main.label_view_min)
+        layout_record_view.addWidget(self.ui_main.label_view_len)
+        layout_record_view.addWidget(self.ui_main.label_view_max)
         
-        ui.verticalLayout_2D_Matplotlib.addItem(layout_record)
-        ui.verticalLayout_2D_Matplotlib.addWidget(ui.horizontalScrollBar_Graphic)
-        ui.verticalLayout_2D_Matplotlib.addItem(layout_record_view)
+        self.ui_main.verticalLayout_2D_Matplotlib.addItem(layout_record)
+        self.ui_main.verticalLayout_2D_Matplotlib.addWidget(self.ui_main.horizontalScrollBar_Graphic)
+        self.ui_main.verticalLayout_2D_Matplotlib.addItem(layout_record_view)
         
         # 如果添加的全部是 Wiedget 则无需此操作(上面添加了 layout)
-        ui.tab_2D_Matplotlib.setLayout(ui.verticalLayout_2D_Matplotlib)
+        self.ui_main.tab_2D_Matplotlib.setLayout(self.ui_main.verticalLayout_2D_Matplotlib)
     
     def update_record_len_scrollbar_and_label(self):
         record_len = self.record.len()
@@ -380,12 +319,8 @@ class IndoorLocation(QObject):
         ui.comboBox_name.signal_PortComboBox_showPopup.connect(             lambda:self.slot_PortComboBox_showPopup())
         ui.comboBox_name.currentTextChanged.connect(                        lambda:self.slot_port_name())
         
-        ui.comboBox_name.activated.connect(                                 lambda:self.slot_port_name_activated())
         ui.comboBox_name.currentIndexChanged.connect(                       lambda idx:self.slot_port_name_currentIndexChanged(idx))
-        ui.comboBox_name.editTextChanged.connect(                           lambda:self.slot_port_name_editTextChanged())
         ui.comboBox_name.highlighted.connect(                               lambda idx:self.slot_port_name_highlighted(idx))
-        ui.comboBox_name.textActivated.connect(                             lambda:self.slot_port_name_textActivated())
-        ui.comboBox_name.textHighlighted.connect(                           lambda:self.slot_port_name_textHighlighted())
         
         ui.comboBox_baud.currentTextChanged.connect(                        lambda:self.slot_port_baud())
         ui.comboBox_byte.currentTextChanged.connect(                        lambda:self.slot_port_byte())
@@ -397,7 +332,6 @@ class IndoorLocation(QObject):
         ui.pushButton_PortOpenClose.clicked.connect(                        lambda:self.slot_port_open_close())
         ui.pushButton_CleanReceive.clicked.connect(                         lambda:self.slot_clean_receive())
         ui.pushButton_StartSend.clicked.connect(                            lambda:self.slot_send())
-        ui.tableWidget_DataInfo.itemChanged.connect(                        lambda:self.slot_tableWidget_Anchor_changed())
         ui.comboBox_Mode.currentTextChanged.connect(                        lambda:self.slot_mode_changed())
         
         ui.pushButton_RecordStart.clicked.connect(                          lambda:self.slot_record_start_stop())
@@ -408,7 +342,7 @@ class IndoorLocation(QObject):
         ui.pushButton_RecordDelete.clicked.connect(                         lambda:self.slot_record_delete())
         ui.pushButton_RecordDir.clicked.connect(                            lambda:self.slot_record_open_dir())
         ui.pushButton_MapDir.clicked.connect(                               lambda:self.slot_map_open_dir())
-        ui.pushButton_MapImport.clicked.connect(                            lambda:self.slot_map_import_dir())
+        ui.pushButton_MapImport.clicked.connect(                            lambda:self.slot_map_import())
         
         ui.listWidget_RecordFiles.currentTextChanged.connect(               lambda f_name:self.slot_record_select(f_name))
         ui.listWidget_MapFiles.currentTextChanged.connect(                  lambda f_name:self.slot_map_select(f_name))
@@ -416,12 +350,7 @@ class IndoorLocation(QObject):
         # 滚动条信号与槽
         ui.horizontalScrollBar_Graphic.signal_scrollbar_ctrl_wheel.connect( lambda det:self.slot_griphic_scrollbar_ctrl_wheel(det))     # Ctrl + Wheel
         ui.horizontalScrollBar_Graphic.valueChanged.connect(                lambda val:self.slot_griphic_scrollbar_val_changed(val))    # tracking() 值发生变化
-        # ui.horizontalScrollBar_Graphic.rangeChanged.connect(                lambda:self.slot_griphic_scrollbar_range_changed())
-        ui.horizontalScrollBar_Graphic.sliderPressed.connect(               lambda:self.slot_griphic_scrollbar_slider_pressed()) # 按下滑块
-        # ui.horizontalScrollBar_Graphic.sliderMoved.connect(                 lambda:self.slot_griphic_scrollbar_slider_moved())
-        ui.horizontalScrollBar_Graphic.sliderReleased.connect(              lambda:self.slot_griphic_scrollbar_slider_released())# 释放滑块
-        # ui.horizontalScrollBar_Graphic.actionTriggered.connect(             lambda:self.slot_griphic_scrollbar_action_trigged())
-        
+
         ui.checkbox_graphic_all.stateChanged.connect(                       lambda sta:self.slot_checkbox_record_view_all_changed(sta))
         ui.checkbox_graphic_track.stateChanged.connect(                     lambda sta:self.slot_checkbox_record_view_track_changed(sta))
 
@@ -433,13 +362,6 @@ class IndoorLocation(QObject):
                 self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_green.png'))
             elif(0 == self.ui_cnt_recording % 2):
                 self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_red.png'))
-    
-    def clear_display_2d_matplotlib(self):
-        # self.log('清除当前显示')
-        self.axes_2d_static.clear()                             # 清除当前显示
-        # self.axes_2d_static.grid(True)                          # 显示网格
-        self.axes_2d_static.set_xlim(self.x_min, self.x_max)    # 设置坐标轴显示范围
-        self.axes_2d_static.set_ylim(self.y_min, self.y_max)
     
     def slot_mode_changed(self):
         self.log('模式切换到 %s' %(self.ui_main.comboBox_Mode.currentText()))
@@ -566,20 +488,20 @@ class IndoorLocation(QObject):
         self.ui_main.lineEdit_RecordDir.setText(self.map.dir)
         self.slot_map_refresh()
     
-    def slot_map_import_dir(self):
+    def slot_map_import(self):
         # 清除绘图
-        self.clear_display_2d_matplotlib()
+        self.axes_2d_static.clear()
         
         # 打开地图文件
         with open(self.map.f_path_name, encoding='utf-8') as f_map:
             map_str = f_map.read()
         self.map.dict = eval(map_str)
-        self.draw_map(self.map.dict)
+        self.draw_map(self.map.dict, resize=True)
         
         # 重新绘图
         self.axes_2d_static.figure.canvas.draw()
     
-    def draw_map(self, map):
+    def draw_map(self, map, resize):
         if 'type' in map:
             if '2d' == map['type']:
                 cfg = map['cfg']                # 默认配置
@@ -588,8 +510,10 @@ class IndoorLocation(QObject):
                 by = h * bp
                 
                 # 设置视图范围
-                self.axes_2d_static.set_xlim(0-bx, w+bx)
-                self.axes_2d_static.set_ylim(0-by, h+by)
+                if resize:
+                    self.axes_2d_static.set_xlim(0-bx, w+bx)
+                    self.axes_2d_static.set_ylim(0-by, h+by)
+                
                 xs = [0, w, w, 0, 0]
                 ys = [0, 0, h, h, 0]
                 
@@ -600,11 +524,8 @@ class IndoorLocation(QObject):
                 # 绘制基站位置
                 if 'anchors' in map:
                     anchors = map['anchors']
-                    i = 0
                     for k in anchors:
                         anchor = anchors[k]
-                        
-                        id = '%s' %(i)
                         x, y = anchor['xy']
                         
                         if 'c' in anchor:
@@ -619,9 +540,8 @@ class IndoorLocation(QObject):
                             
                         circle = plt.Circle(xy=(x, y), radius=15, color=c, ec=ec, alpha=cfg['anchor']['a'], picker=5)
                         circle.set_zorder(cfg['anchor']['zo'])
-                        self.axes_2d_static.annotate(id, xy=(x, y), fontsize=8, ha='center', va='center', zorder=10)
+                        self.axes_2d_static.annotate(k, xy=(x, y), fontsize=8, ha='center', va='center', zorder=10)
                         self.axes_2d_static.add_artist(circle)
-                        i += 1
                 
                 # 绘制参考线
                 if 'lines' in map:
@@ -744,15 +664,7 @@ class IndoorLocation(QObject):
     def slot_griphic_scrollbar_val_changed(self, val):
         self.update_record_view_scrollbar_and_label()
         self.ui_main.label_record_idx.setText('idx:%d' %(val))
-    def slot_griphic_scrollbar_slider_pressed(self):
-        # print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-        # print('pressed:')
-        pass
-    def slot_griphic_scrollbar_slider_released(self):
-        # print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-        # print('released:')
-        pass
-    
+        
     def slot_checkbox_record_view_all_changed(self, sta):
         if 0 == sta:    # 不选中
             self.ui_main.checkbox_graphic_all.setStyleSheet('background-color:rgb(240, 240, 240)')
@@ -807,27 +719,16 @@ class IndoorLocation(QObject):
     def slot_port_name(self):
         self.port.name = self.ui_main.comboBox_name.currentText()
         # self.log('端口 %s' %(self.port.name))
-    
-    def slot_port_name_activated(self):
-        # print('activated')
-        pass
+        
     def slot_port_name_currentIndexChanged(self, idx):
         if(len(self.port.valid) > 0):
             self.log(self.port.valid[idx])
-    def slot_port_name_editTextChanged(self):
-        # print('editTextChanged')
-        pass
+            
     def slot_port_name_highlighted(self, idx):
         # print('highlighted id = ', idx)
         if(len(self.port.valid) > 0):
             self.log(self.port.valid[idx])
-    def slot_port_name_textActivated(self):
-        # print('textActivated')
-        pass
-    def slot_port_name_textHighlighted(self):
-        # print('textHighlighted')
-        pass
-    
+            
     def slot_port_baud(self):
         self.port.baud = int(self.ui_main.comboBox_baud.currentText(), 10)
         self.log('波特率 %s' %(self.port.baud))
@@ -912,70 +813,8 @@ class IndoorLocation(QObject):
             # self.log(send_str)
             self.log('发送:\r\n %s' %(send_bytes))
             self.port.port.write(send_bytes)
-            pass
         else:
             self.log('端口未打开！')
-            pass
-        pass
-    
-    def update_2d_matplotlib_limit(self):
-        x_min = self.anchors[0].x
-        x_max = self.anchors[0].x
-        y_min = self.anchors[0].y
-        y_max = self.anchors[0].y
-        
-        if(self.anchors[1].x < x_min):
-            x_min = self.anchors[1].x
-        if(self.anchors[2].x < x_min):
-            x_min = self.anchors[2].x
-        
-        if(self.anchors[1].x > x_max):
-            x_max = self.anchors[1].x
-        if(self.anchors[2].x > x_max):
-            x_max = self.anchors[2].x
-        
-        if(self.anchors[1].y < y_min):
-            y_min = self.anchors[1].y
-        if(self.anchors[2].y < y_min):
-            y_min = self.anchors[2].y
-        
-        if(self.anchors[1].y > y_max):
-            y_max = self.anchors[1].y
-        if(self.anchors[2].y > y_max):
-            y_max = self.anchors[2].y
-        
-        self.keep_out = 200
-        
-        self.x_min = x_min - self.keep_out
-        self.x_max = x_max + self.keep_out
-        self.y_min = y_min - self.keep_out
-        self.y_max = y_max + self.keep_out
-        self.axes_2d_static.set_xlim(self.x_min, self.x_max)
-        self.axes_2d_static.set_ylim(self.y_min, self.y_max)
-        pass
-    
-    def slot_tableWidget_Anchor_changed(self):
-        
-        # a0_x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
-        # print(a0_x)
-        
-        self.anchors[0].x = float(self.ui_main.tableWidget_DataInfo.item(0, 0).text())
-        self.anchors[0].y = float(self.ui_main.tableWidget_DataInfo.item(0, 1).text())
-        self.anchors[0].z = float(self.ui_main.tableWidget_DataInfo.item(0, 2).text())
-        
-        self.anchors[1].x = float(self.ui_main.tableWidget_DataInfo.item(1, 0).text())
-        self.anchors[1].y = float(self.ui_main.tableWidget_DataInfo.item(1, 1).text())
-        self.anchors[1].z = float(self.ui_main.tableWidget_DataInfo.item(1, 2).text())
-        
-        self.anchors[2].x = float(self.ui_main.tableWidget_DataInfo.item(2, 0).text())
-        self.anchors[2].y = float(self.ui_main.tableWidget_DataInfo.item(2, 1).text())
-        self.anchors[2].z = float(self.ui_main.tableWidget_DataInfo.item(2, 2).text())
-        
-        self.update_2d_matplotlib_limit()
-        
-        self.slot_mode_changed()
-        
-        pass
     
     def slot_dock_show_hide(self, dock_set, is_checked):
         dock_set.setVisible(is_checked)
@@ -1010,12 +849,6 @@ class IndoorLocation(QObject):
         self.record.item_dict['r0'] = self.new_pkg.r0
         self.record.item_dict['r1'] = self.new_pkg.r1
         self.record.item_dict['r2'] = self.new_pkg.r2
-        self.record.item_dict['a0.x'] = self.anchors[0].x
-        self.record.item_dict['a0.y'] = self.anchors[0].y
-        self.record.item_dict['a1.x'] = self.anchors[1].x
-        self.record.item_dict['a1.y'] = self.anchors[1].y
-        self.record.item_dict['a2.x'] = self.anchors[2].x
-        self.record.item_dict['a2.y'] = self.anchors[2].y
         self.record.item_dict['raw'] = self.new_pkg.raw
     
     def uart_rx_handle(self):
@@ -1052,10 +885,10 @@ class IndoorLocation(QObject):
                 print(e)
     
     def update_record_graphic(self):
-        if (self.drawing_end != self.record.view_max) or (self.drawing_len != self.record.view_len):
+        if (self.drawed_end != self.record.view_max) or (self.drawed_len != self.record.view_len):
             
             # 清除当前绘图
-            self.clear_display_2d_matplotlib()
+            self.axes_2d_static.clear()
             
             if self.record.view_len > 0:
                 # 取出需要绘制的数据包
@@ -1071,28 +904,35 @@ class IndoorLocation(QObject):
                 # 更新数据包内容文本
                 self.update_record_text_info(record)
                 
+                map = self.map.dict
                 # 绘制地图
-                self.draw_map(self.map.dict)
+                self.draw_map(map, resize=False)
                 
-                # 绘制最后一条记录中 距离圆
-                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=record['d0'], color='#FF0000', ec='c', alpha=0.2, picker=5)
-                self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=record['d1'], color='g', ec='c', alpha=0.2, picker=5)
-                self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=record['d2'], color='b', ec='c', alpha=0.2, picker=5)
-                self.axes_2d_static.add_artist(circle)
-                
-                # 绘制最后一条记录中 信号圆
-                circle = plt.Circle((record['a0.x'], record['a0.y']), radius=record['r0'], color='gray', ec='c', alpha=0.1, picker=5)
-                self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a1.x'], record['a1.y']), radius=record['r1'], color='gray', ec='c', alpha=0.1, picker=5)
-                self.axes_2d_static.add_artist(circle)
-                circle = plt.Circle((record['a2.x'], record['a2.y']), radius=record['r2'], color='gray', ec='c', alpha=0.1, picker=5)
-                
+                if 'type' in map:
+                    if '2d' == map['type']:
+                        cfg = map['cfg']                # 默认配置
+                        if 'anchors' in map:
+                            anchors = map['anchors']
+                            for k in anchors:
+                                anchor = anchors[k]
+                                x, y = anchor['xy']
+                                
+                                # 绘制最后一条记录中 距离圆
+                                key_d = 'd%d' %(k)
+                                circle = plt.Circle((x, y), radius=record[key_d], color=anchor['c'], ec='c', alpha=cfg['distance']['a'], picker=5)
+                                circle.set_zorder(cfg['distance']['zo'])
+                                self.axes_2d_static.add_artist(circle)
+                                
+                                # 绘制最后一条记录中 信号圆
+                                key_r = 'r%d' %(k)
+                                circle = plt.Circle((x, y), radius=record[key_r], color=cfg['rssi']['c'], ec='c', alpha=cfg['rssi']['a'], picker=5)
+                                circle.set_zorder(cfg['rssi']['zo'])
+                                self.axes_2d_static.add_artist(circle)
+            
             self.axes_2d_static.figure.canvas.draw()    # 重新绘制
             
-            self.drawing_end = self.record.view_max
-            self.drawing_len = self.record.view_len
+            self.drawed_end = self.record.view_max
+            self.drawed_len = self.record.view_len
 
 if __name__ == '__main__':
     app = QApplication([])
