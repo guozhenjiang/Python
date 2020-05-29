@@ -4,29 +4,40 @@
 'type':'2d',
 'date':'2020-05-28 20:10:49',
 
-# 							zorder	color	alpha
-'default_cfg':{	'map':(		1,		'gray', 0.6),
-				'distance':(2,		'c',	0.1),
-				'rssi':(	3,		'gray',	0.1),
-				'tag':(		4,		'c',	1.0),
-				'anchor':(	5,		'w',	1.0)	},
+# 默认配置
+#                       ZOrder  Color       EdgeColor   Alpha
+'cfg':{ 'ref':      {   'zo':1, 'c':'gray', 'ec':'k',   'a':0.3 },
+        'distance': {   'zo':2, 'c':'c',    'ec':'k',   'a':0.1 },
+        'rssi':     {   'zo':3, 'c':'gray', 'ec':'k',   'a':0.1 },
+        'tag':      {   'zo':4, 'c':'c',    'ec':'k',   'a':1.0 },
+        'anchor':   {   'zo':5, 'c':'w',    'ec':'k',   'a':0.6 },
+        'annotate': {   'zo':6, 'c':'k',    'ec':'w',   'a':0.9 }   },
 
-# 基站: coordinates(x, y)
-'anchors'		:{	'coordinates'	:[(0, 0), (0, 300), (300, 0)],
-					'color'			:'w',
-					'ec'			:'k'	},
+# 地图大小 单位 cm
+#      (Width,  Height, BorderPercent)
+'size':(677,    901,    0.1),
 
-# 直线 (x, y) color width
-'lines'			:{	'root'	:{	'coordinates'	:[(0,0), (6770, 0), (6770, 9010), (0, 9010), (0, 0)],
-								'width'			:5,
-								'color'			:'blue'	},
-					'test'	:{	'coordinates'	:[(-10, -10), (300, 79)],
-								'width'			:10,
-								'color'			:'red'	}								},
+# 基站
+#                        (x, y) [Color EdgeColor]
+'anchors':{ '0':{   'xy':(0, 0),    'c':'r',    'ec':'k'    },
+            '1':{   'xy':(300, 0),  'c':'g',    'ec':'k'    },
+            '2':{   'xy':(0, 300),  'c':'b',    'ec':'k'    }   },
 
-# 矩形 (x, y, width, height, color, edge_color, angle)
-'rectangles'	:{	'table_1':(0,	0,		50,		100,	'red',		'blue',		0.0),
-					'table_3':(12,	66,		40,		80,		'yellow',	'#000000',	0.0),
-					'table_2':(100, 150,	300,	50,		'#000000',	'#000000',	15.0)		}
+# 直线
+#                             (x, y) [Width Color]
+#'lines':{   'test1':{   'xy':[(0, 0), (6770, 0), (6770, 9010), (0, 9010), (0, 0)], 'w':5, 'c':'r'  },
+#            'test2':{   'xy':[(-10, -10), (300, 79)], 'w':10}},
+
+# 矩形
+#                                     (x,     y,      Width,  Height, Angle) [Color EdgeColor]
+'rectangles':{  '柜子':{      'xywha':(0,     0,      39,     360,    0), 'c':'yellow'  },
+                '书架':{      'xywha':(0,     360,    39,     100,    0), 'c':'black'  },
+                '屋梁':{      'xywha':(179,   0,      458,    63,     0), 'c':'white'  },
+                '空调':{      'xywha':(603,   0,      46,     48,     42) },
+                '角柱':{      'xywha':(637,   0,      40,     70,     0), 'c':'gray'  },
+                '靠墙工位':{  'xywha':(179,   164,    480,    160,    0), 'c':'green' },
+                '门口工位':{  'xywha':(196,   511,    440,    160,    0), 'c':'green' },
+                '角柱':{      'xywha':(636,   571,    41,     20,     0) },
+                '机房':{      'xywha':(516,   591,    161,    310,    0) }   }
 
 }

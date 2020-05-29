@@ -437,7 +437,7 @@ class IndoorLocation(QObject):
     def clear_display_2d_matplotlib(self):
         # self.log('清除当前显示')
         self.axes_2d_static.clear()                             # 清除当前显示
-        self.axes_2d_static.grid(True)                          # 显示网格
+        # self.axes_2d_static.grid(True)                          # 显示网格
         self.axes_2d_static.set_xlim(self.x_min, self.x_max)    # 设置坐标轴显示范围
         self.axes_2d_static.set_ylim(self.y_min, self.y_max)
     
@@ -581,53 +581,97 @@ class IndoorLocation(QObject):
     
     def draw_map(self, map):
         if 'type' in map:
-            self.log('%s 地图' %(map['type']))
-            
-            if 'anchors' in map:
-                self.log('加载基站信息')
-                anchors = map['anchors']
-                for i in range(len(anchors['coordinates'])):
-                    id = '%s' %(i)
-                    x, y = anchors['coordinates'][i]
-                    c = anchors['color']
-                    ec = anchors['ec']
-                    
-                    circle = plt.Circle(xy=(x, y), radius=15, color=c, ec=ec, alpha=1, picker=5)
-                    circle.set_zorder(2)
-                    self.axes_2d_static.annotate(id, xy=(x, y), fontsize=8, ha='center', va='center')
-                    self.axes_2d_static.add_artist(circle)
-            
-            if 'lines' in map:
-                self.log('加载参照物 直线')
-                lines = map['lines']
-                for l in lines:
-                    print(l)
-                    xs = []
-                    ys = []
-                    w = lines[l]['width']
-                    c = lines[l]['color']
-                    
-                    for xy in lines[l]['coordinates']:
-                        x, y = xy
-                        xs.append(x)
-                        ys.append(y)
-                    # Line2D(xdata, ydata, linewidth=None, linestyle=None, color=None, marker=None, markersize=None, markeredgewidth=None, markeredgecolor=None, markerfacecolor=None, markerfacecoloralt='none', fillstyle=None, antialiased=None, dash_capstyle=None, solid_capstyle=None, dash_joinstyle=None, solid_joinstyle=None, pickradius=5, drawstyle=None, markevery=None, **kwargs)
-                    line = mlines.Line2D(xs, ys, linewidth=w, color=c, alpha=0.5)
-                    self.axes_2d_static.add_artist(line)
+            if '2d' == map['type']:
+                cfg = map['cfg']                # 默认配置
+                w, h, bp = map['size']          # 大小、边距比例
+                bx = w * bp
+                by = h * bp
                 
-            if 'rectangles' in map:
-                self.log('加载参照物 矩形')
-                rectangles = map['rectangles']
+                # 设置视图范围
+                self.axes_2d_static.set_xlim(0-bx, w+bx)
+                self.axes_2d_static.set_ylim(0-by, h+by)
+                xs = [0, w, w, 0, 0]
+                ys = [0, 0, h, h, 0]
                 
-                for k in rectangles.keys():
-                    self.log(k)
-                    x, y, w, h, c, ec, a = rectangles[k]
-                    print(x, y)
-                    
-                    rectangle = mpatches.Rectangle(xy=(x, y), width=w, height=h, angle=a, ec=ec, fc=c, alpha=0.5, picker=5)
-                    # rectangle.set_zorder(2)
-                    # self.axes_2d_static.annotate(k, xy=(x, y), fontsize=8, ha='center', va='center')
-                    self.axes_2d_static.add_patch(rectangle)
+                # 绘制边界线
+                line = mlines.Line2D(xs, ys, linewidth=1, color='r', alpha=cfg['ref']['a'])
+                self.axes_2d_static.add_artist(line)
+                
+                # 绘制基站位置
+                if 'anchors' in map:
+                    anchors = map['anchors']
+                    i = 0
+                    for k in anchors:
+                        anchor = anchors[k]
+                        
+                        id = '%s' %(i)
+                        x, y = anchor['xy']
+                        
+                        if 'c' in anchor:
+                            c = anchor['c']
+                        else:
+                            c = cfg['anchor']['c']
+                            
+                        if 'ec' in anchor:
+                            ec = anchor['ec']
+                        else:
+                            ec = cfg['anchor']['ec']
+                            
+                        circle = plt.Circle(xy=(x, y), radius=15, color=c, ec=ec, alpha=cfg['anchor']['a'], picker=5)
+                        circle.set_zorder(cfg['anchor']['zo'])
+                        self.axes_2d_static.annotate(id, xy=(x, y), fontsize=8, ha='center', va='center', zorder=10)
+                        self.axes_2d_static.add_artist(circle)
+                        i += 1
+                
+                # 绘制参考线
+                if 'lines' in map:
+                    lines = map['lines']
+                    for k in lines:
+                        line = lines[k]
+                        
+                        xs = []
+                        ys = []
+                        for xy in line['xy']:
+                            x, y = xy
+                            xs.append(x)
+                            ys.append(y)
+                        
+                        if 'w' in line:
+                            w = line['w']
+                        else:
+                            w = 1
+                        
+                        if 'c' in line:
+                            c = line['c']
+                        else:
+                            c = cfg['ref']['c']
+                        
+                        # Line2D(xdata, ydata, linewidth=None, linestyle=None, color=None, marker=None, markersize=None, markeredgewidth=None, markeredgecolor=None, markerfacecolor=None, markerfacecoloralt='none', fillstyle=None, antialiased=None, dash_capstyle=None, solid_capstyle=None, dash_joinstyle=None, solid_joinstyle=None, pickradius=5, drawstyle=None, markevery=None, **kwargs)
+                        line = mlines.Line2D(xs, ys, linewidth=w, color=c, alpha=cfg['ref']['a'])
+                        self.axes_2d_static.add_artist(line)
+                
+                # 绘制参考矩形
+                if 'rectangles' in map:
+                    rectangles = map['rectangles']
+                    for k in rectangles:
+                        rectangle = rectangles[k]
+                        
+                        x, y, w, h, a = rectangle['xywha']
+                        
+                        if 'c' in rectangle:
+                            c = rectangle['c']
+                        else:
+                            c = cfg['ref']['c']
+                            
+                        if 'ec' in rectangle:
+                            ec = rectangle['ec']
+                        else:
+                            ec = cfg['ref']['ec']
+                        
+                        rectangle = mpatches.Rectangle(xy=(x, y), width=w, height=h, angle=a, fc=c, ec=ec, alpha=cfg['ref']['a'], picker=5)
+                        rectangle.set_zorder(cfg['ref']['zo'])
+                        # self.axes_2d_static.annotate(k, xy=(x, y), fontsize=8, ha='center', va='center')
+                        self.axes_2d_static.add_patch(rectangle)
         else:
             self.log('无法正确加载地图，请检查地图文件格式')
             
@@ -1020,7 +1064,6 @@ class IndoorLocation(QObject):
             
                 # 绘制所有记录中 标签位置点
                 for i in range(self.record.view_len):
-                    # print('i=%d (%d ~ %d)' %(i, self.record.view_min-1, self.record.view_max-1))
                     a = 1.0 / self.record.view_len * i
                     circle = plt.Circle((records[i]['x'], records[i]['y']), radius=3, color='c', ec='c', alpha=a, picker=5)
                     self.axes_2d_static.add_artist(circle)
