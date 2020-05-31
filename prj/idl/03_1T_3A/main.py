@@ -502,6 +502,25 @@ class IndoorLocation(QObject):
         self.axes_2d_static.figure.canvas.draw()
     
     def draw_map(self, map, resize):
+        # x, y, w, h = self.ui_main.horizontalLayout_2D.GetGeometry()
+
+        # r = self.ui_main.horizontalLayout_2D.getGeometry()
+        # print(r.x())
+        # print(r.y())
+
+        # w = self.axes_2d_static.width()
+        # h = self.axes_2d_static.height()
+        # print(w, h)
+
+        w = self.ui_main.tabWidget_Display.width()
+        h = self.ui_main.tabWidget_Display.height()
+        print(w, h)
+
+        # print('2D 图形化控件 x:', self.ui_main.horizontalLayout_2D.x())
+        # print('2D 图形化控件 y:', self.ui_main.horizontalLayout_2D.y())
+        # print('2D 图形化控件 x:', self.axes_2d_static.x())
+        # print('2D 图形化控件 y:', self.axes_2d_static.y())
+
         if 'type' in map:
             if '2d' == map['type']:
                 cfg = map['cfg']                # 默认配置
@@ -906,7 +925,7 @@ class IndoorLocation(QObject):
                 
                 map = self.map.dict
                 # 绘制地图
-                self.draw_map(map, resize=False)
+                self.draw_map(map, resize=True)
                 
                 if 'type' in map:
                     if '2d' == map['type']:
