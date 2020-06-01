@@ -110,7 +110,7 @@ class Pkg_1T3A():
         self.r1 = 0
         self.r2 = 0
         
-        self.raw = bytes()
+        self.raw = ''
     
     def update(self, raw_bytes):
         if (0xFF == raw_bytes[0]) and (0x02 == raw_bytes[1]):
@@ -125,7 +125,9 @@ class Pkg_1T3A():
             self.r1 = int(np.int16((raw_bytes[21]  << 8) | raw_bytes[11]))
             self.r2 = int(np.int16((raw_bytes[23]  << 8) | raw_bytes[24]))
             
-            self.raw = raw_bytes
+            self.raw = ''
+            for v in raw_bytes:
+                self.raw += '%02X ' %(v)
             
             return True
         else:
@@ -353,6 +355,8 @@ class IndoorLocation(QObject):
 
         ui.checkbox_graphic_all.stateChanged.connect(                       lambda sta:self.slot_checkbox_record_view_all_changed(sta))
         ui.checkbox_graphic_track.stateChanged.connect(                     lambda sta:self.slot_checkbox_record_view_track_changed(sta))
+        
+        # ui.horizontalLayout_2D.resizeEvent.connect(                              lambda:self.slot_graphic_resize())
 
     # 更新需要动态显示的 UI 每 500ms 调用一次
     def update_dynamic_ui(self):
@@ -502,24 +506,10 @@ class IndoorLocation(QObject):
         self.axes_2d_static.figure.canvas.draw()
     
     def draw_map(self, map, resize):
-        # x, y, w, h = self.ui_main.horizontalLayout_2D.GetGeometry()
-
-        # r = self.ui_main.horizontalLayout_2D.getGeometry()
-        # print(r.x())
-        # print(r.y())
-
-        # w = self.axes_2d_static.width()
-        # h = self.axes_2d_static.height()
+        # # 可以获取到宽和高
+        # w = self.ui_main.tabWidget_Display.width()
+        # h = self.ui_main.tabWidget_Display.height()
         # print(w, h)
-
-        w = self.ui_main.tabWidget_Display.width()
-        h = self.ui_main.tabWidget_Display.height()
-        print(w, h)
-
-        # print('2D 图形化控件 x:', self.ui_main.horizontalLayout_2D.x())
-        # print('2D 图形化控件 y:', self.ui_main.horizontalLayout_2D.y())
-        # print('2D 图形化控件 x:', self.axes_2d_static.x())
-        # print('2D 图形化控件 y:', self.axes_2d_static.y())
 
         if 'type' in map:
             if '2d' == map['type']:
@@ -528,10 +518,10 @@ class IndoorLocation(QObject):
                 bx = w * bp
                 by = h * bp
                 
-                # 设置视图范围
-                if resize:
-                    self.axes_2d_static.set_xlim(0-bx, w+bx)
-                    self.axes_2d_static.set_ylim(0-by, h+by)
+                # # 设置视图范围
+                # if resize:
+                self.axes_2d_static.set_xlim(0-bx, w+bx)
+                self.axes_2d_static.set_ylim(0-by, h+by)
                 
                 xs = [0, w, w, 0, 0]
                 ys = [0, 0, h, h, 0]
@@ -699,7 +689,10 @@ class IndoorLocation(QObject):
             self.ui_main.checkbox_graphic_track.setStyleSheet('background-color:gray')
         
         self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
-        
+    
+    # def slot_graphic_resize(self):
+    #     print('大小改变')
+    
     def slot_win_set_visibility_changed(self, visable):
         self.ui_main.action_ViewSet.setChecked(visable)
     
@@ -845,16 +838,27 @@ class IndoorLocation(QObject):
     def update_record_text_info(self, item_dict):
         pkg_stamp = item_dict['stamp']
         
-        pkg_info = ' T(%d, %d)' %(item_dict['x'], item_dict['y'])
-        pkg_info += ' D(%d, %d, %d)' %(item_dict['d0'], item_dict['d1'], item_dict['d2'])
-        pkg_info += ' R(%d, %d, %d)' %(item_dict['r0'], item_dict['r1'], item_dict['r2'])
+        pkg_info = ' T(%4d, %4d)' %(item_dict['x'], item_dict['y'])
+        pkg_info += ' D(%3d, %3d, %3d)' %(item_dict['d0'], item_dict['d1'], item_dict['d2'])
+        pkg_info += ' R(%4d, %4d, %4d)' %(item_dict['r0'], item_dict['r1'], item_dict['r2'])
         
         pkg_raw = item_dict['raw']
-        # for v in item_dict['raw']:
-        #     pkg_raw += ' %02X' %(v)
         
         pkg_str = pkg_stamp + pkg_info + pkg_raw
         self.ui_main.plainTextEdit_Hex.appendPlainText(pkg_str)
+        self.ui_main.lineEdit_PkgRaw.setText(pkg_stamp + pkg_raw)
+        self.ui_main.lineEdit_PkgInfo.setText(pkg_info)
+    
+    def update_record_item_info(self, item_dict):
+        pkg_stamp = item_dict['stamp']
+        
+        pkg_info = ' T(%4d, %4d)' %(item_dict['x'], item_dict['y'])
+        pkg_info += ' D(%3d, %3d, %3d)' %(item_dict['d0'], item_dict['d1'], item_dict['d2'])
+        pkg_info += ' R(%4d, %4d, %4d)' %(item_dict['r0'], item_dict['r1'], item_dict['r2'])
+        
+        pkg_raw = item_dict['raw']
+        
+        pkg_str = pkg_stamp + pkg_info + pkg_raw
         self.ui_main.lineEdit_PkgRaw.setText(pkg_stamp + pkg_raw)
         self.ui_main.lineEdit_PkgInfo.setText(pkg_info)
     
@@ -921,11 +925,11 @@ class IndoorLocation(QObject):
                     self.axes_2d_static.add_artist(circle)
                 
                 # 更新数据包内容文本
-                self.update_record_text_info(record)
+                self.update_record_item_info(record)
                 
                 map = self.map.dict
                 # 绘制地图
-                self.draw_map(map, resize=True)
+                self.draw_map(map, resize=False)
                 
                 if 'type' in map:
                     if '2d' == map['type']:

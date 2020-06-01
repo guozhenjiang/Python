@@ -111,10 +111,10 @@
        <widget class="QWidget" name="layoutWidget">
         <property name="geometry">
          <rect>
-          <x>9</x>
-          <y>9</y>
-          <width>411</width>
-          <height>471</height>
+          <x>-1</x>
+          <y>-1</y>
+          <width>391</width>
+          <height>451</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2D_Matplotlib">
