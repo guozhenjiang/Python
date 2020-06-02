@@ -70,14 +70,14 @@ class Record():
         self.start()
     
     def start(self):
-        self.items_list = []        # 以列表方式存储记录信息(记录结束后有可能保存到文件 有可能丢弃)
-        self.item_dict = {}         # 以字典方式存储新的记录项
+        self.txt = {}
+        self.items = {}
     
-    def push_new_item(self):
-        self.items_list.append(copy.copy(self.item_dict))
+    def push_new_item(self, info):
+        self.items[self.len()] = info
     
     def len(self):
-        return len(self.items_list)
+        return len(self.items)
 
 class Map():
     def __init__(self):
@@ -140,7 +140,7 @@ class Pkg_nTnA():
             self.info['raw'] = raw
             
             # print(self.info)
-            print('%s' %(str(self.info)))
+            # print('%s' %(str(self.info)))
             
             return True
         else:
@@ -178,6 +178,9 @@ class IndoorLocation(QObject):
         self.record = Record()          # 数据记录
         self.drawed_end = 0             # 图形化状态
         self.drawed_len = 0
+                
+        self.drawed_w = 0
+        self.drawed_h = 0
         self.ui_cnt_recording = 0       # 动态界面变化控制 记录中按钮图标
         
         # 初始化
@@ -369,8 +372,6 @@ class IndoorLocation(QObject):
         ui.checkbox_graphic_all.stateChanged.connect(                       lambda sta:self.slot_checkbox_record_view_all_changed(sta))
         ui.checkbox_graphic_track.stateChanged.connect(                     lambda sta:self.slot_checkbox_record_view_track_changed(sta))
         
-        # ui.horizontalLayout_2D.resizeEvent.connect(                              lambda:self.slot_graphic_resize())
-
     # 更新需要动态显示的 UI 每 500ms 调用一次
     def update_dynamic_ui(self):
         if(self.record.is_recording):
@@ -424,13 +425,18 @@ class IndoorLocation(QObject):
         if f_name_user != '':                           # 若输入内容不为空 使用空格分开自动前缀和用户输入部分
             f_name_user = ' ' + f_name_user
         
-        f_record = self.record.dir + '/' + save_name + f_name_user + '.csv'
-        self.log('保存: %s' %(f_record))
+        f_record = self.record.dir + '/' + save_name + f_name_user + '.txt'
+        self.record.txt = {}
+        self.record.txt['map'] = self.map.f_path_name
+        self.record.txt['items'] = self.record.items
         
-        dict_to_csv(self.record.items_list, f_record)
+        with open(f_record, 'w', encoding='utf-8') as f:
+            f.write(str(self.record.txt))
         
         self.slot_record_refresh()
         self.ui_main.pushButton_RecordSave.setEnabled(False)
+        
+        self.log('保存: %s' %(f_record))
         
     def slot_record_refresh(self):
         # f_name, f_filter = QFileDialog.getOpenFileName(self.ui_main, '选择单个文件', './', '筛选条件(*.jpg *.png *.bmp)')
@@ -470,25 +476,18 @@ class IndoorLocation(QObject):
     
     def slot_record_play(self):
         self.log('回放 %s' %(self.record.f_path_name))
-        df = pd.read_csv(self.record.f_path_name)   # <class 'pandas.core.frame.DataFrame'>
-        dc = df.to_dict()                           # <class 'dict'>
-        keys = dc.keys()
-        keys_list = list(keys)
-        num = len(dc[keys_list[0]])
         
-        self.record.items_list = []
+        with open(self.record.f_path_name, 'r', encoding='utf-8') as f:
+            self.record.txt = eval(f.read())
         
-        for i in range(num):
-            self.record.item_dict = {}
-            for k in keys:
-                self.record.item_dict[k] = dc[k][i]
-            # print(self.record.item_dict)
-            self.record.items_list.append(copy.copy(self.record.item_dict))
-        
-        print('导入 CSV 成功')
+        self.map.f_path_name = self.record.txt['map']
+        self.record.items = self.record.txt['items']
         
         self.update_record_len_scrollbar_and_label()
         self.update_record_view_scrollbar_and_label()
+        
+        if '' != self.map.f_path_name:
+            self.slot_map_import()
     
     def slot_record_delete(self):
         self.log('删除: %s' %(self.record.f_path_name))
@@ -519,27 +518,49 @@ class IndoorLocation(QObject):
         self.axes_2d_static.figure.canvas.draw()
     
     def draw_map(self, map, resize):
-        # # 可以获取到宽和高
-        # w = self.ui_main.tabWidget_Display.width()
-        # h = self.ui_main.tabWidget_Display.height()
-        # print(w, h)
-
+        
         if 'type' in map:
             if '2d' == map['type']:
                 cfg = map['cfg']                # 默认配置
-                w, h, bp = map['size']          # 大小、边距比例
+            
+                fig_size = self.axes_2d_static.figure.get_size_inches() * self.axes_2d_static.figure.dpi
+                fig_w = fig_size[0]
+                fig_h = fig_size[1]
+                fig_wh = fig_w / fig_h      # 宽高比 比值越大 越扁平 比值越小 越瘦高
+                
+                w, h, bp = map['size']      # 宽、高、边距比例
+                map_wh = w / h
                 bx = w * bp
                 by = h * bp
                 
-                # # 设置视图范围
-                # if resize:
-                self.axes_2d_static.set_xlim(0-bx, w+bx)
-                self.axes_2d_static.set_ylim(0-by, h+by)
+                map_x_min = 0 - bx
+                map_x_max = w + bx
+                map_x_mid = (map_x_max + map_x_min) / 2
+                map_x_span = (map_x_max - map_x_min) / 2
                 
+                map_y_min = 0 - by
+                map_y_max = h + by
+                map_y_mid = (map_y_max + map_y_min) / 2
+                map_y_span = (map_y_max - map_y_min) / 2
+                
+                map_w = w + 2 * bx
+                map_h = h + 2 * by
+                
+                scale = map_wh / fig_wh     # 比值越大(大于1) 地图范围相对于视图范围更扁平 Y 方向扩充
+                
+                if scale > 1:               # 纵向扩充
+                    y_span = map_x_span / fig_w * fig_h
+                    self.axes_2d_static.set_xlim(map_x_min, map_x_max)
+                    self.axes_2d_static.set_ylim(map_y_mid-y_span, map_y_mid+y_span)
+                else:                       # 横向扩充
+                    x_span = map_y_span / fig_h * fig_w
+                    self.axes_2d_static.set_xlim(map_x_mid-x_span, map_x_mid+x_span)
+                    self.axes_2d_static.set_ylim(map_y_min, map_y_max)
+                    
+                # 绘制边界线
                 xs = [0, w, w, 0, 0]
                 ys = [0, 0, h, h, 0]
                 
-                # 绘制边界线
                 line = mlines.Line2D(xs, ys, linewidth=1, color='r', alpha=cfg['ref']['a'])
                 self.axes_2d_static.add_artist(line)
                 
@@ -703,9 +724,6 @@ class IndoorLocation(QObject):
         
         self.ui_main.horizontalScrollBar_Graphic.setValue(self.ui_main.horizontalScrollBar_Graphic.maximum())
     
-    # def slot_graphic_resize(self):
-    #     print('大小改变')
-    
     def slot_win_set_visibility_changed(self, visable):
         self.ui_main.action_ViewSet.setChecked(visable)
     
@@ -848,44 +866,13 @@ class IndoorLocation(QObject):
         if self.port.isopen:
             self.uart_rx_handle()
     
-    def update_record_text_info(self, item_dict):
-        pkg_stamp = item_dict['stamp']
-        
-        pkg_info = ' T(%4d, %4d)' %(item_dict['x'], item_dict['y'])
-        pkg_info += ' D(%3d, %3d, %3d)' %(item_dict['d0'], item_dict['d1'], item_dict['d2'])
-        pkg_info += ' R(%4d, %4d, %4d)' %(item_dict['r0'], item_dict['r1'], item_dict['r2'])
-        
-        pkg_raw = item_dict['raw']
-        
-        pkg_str = pkg_stamp + pkg_info + pkg_raw
-        self.ui_main.plainTextEdit_Hex.appendPlainText(pkg_str)
-        self.ui_main.lineEdit_PkgRaw.setText(pkg_stamp + pkg_raw)
-        self.ui_main.lineEdit_PkgInfo.setText(pkg_info)
+    def update_record_text_info(self, info):
+        text = str(info).replace('\'', '')
+        self.ui_main.plainTextEdit_Hex.appendPlainText(str(info).replace('\'', ''))
     
-    def update_record_item_info(self, item_dict):
-        pkg_stamp = item_dict['stamp']
-        
-        pkg_info = ' T(%4d, %4d)' %(item_dict['x'], item_dict['y'])
-        pkg_info += ' D(%3d, %3d, %3d)' %(item_dict['d0'], item_dict['d1'], item_dict['d2'])
-        pkg_info += ' R(%4d, %4d, %4d)' %(item_dict['r0'], item_dict['r1'], item_dict['r2'])
-        
-        pkg_raw = item_dict['raw']
-        
-        pkg_str = pkg_stamp + pkg_info + pkg_raw
-        self.ui_main.lineEdit_PkgRaw.setText(pkg_stamp + pkg_raw)
-        self.ui_main.lineEdit_PkgInfo.setText(pkg_info)
-    
-    def update_record_item_dict(self):
-        self.record.item_dict['stamp'] = time_stamp_ms()
-        self.record.item_dict['x'] = self.new_pkg.x
-        self.record.item_dict['y'] = self.new_pkg.y
-        self.record.item_dict['d0'] = self.new_pkg.d0
-        self.record.item_dict['d1'] = self.new_pkg.d1
-        self.record.item_dict['d2'] = self.new_pkg.d2
-        self.record.item_dict['r0'] = self.new_pkg.r0
-        self.record.item_dict['r1'] = self.new_pkg.r1
-        self.record.item_dict['r2'] = self.new_pkg.r2
-        self.record.item_dict['raw'] = self.new_pkg.raw
+    def update_record_item_info(self, info):
+        self.ui_main.lineEdit_PkgRaw.setText(str(info['raw']))
+        self.ui_main.lineEdit_PkgInfo.setText(str(info['stamp']).replace('\'', '') + str(info['tags']).replace('\'', ''))
     
     def uart_rx_handle(self):
         port = self.port
@@ -904,12 +891,10 @@ class IndoorLocation(QObject):
                         # 成功提取了一个数据包
                         if(self.new_pkg.update(port.rx_cache[0:32])):
                             port.rx_cache = port.rx_cache[32:]  # 移除已处理部分
-                            
-                            self.update_record_item_dict()
-                            self.update_record_text_info(self.record.item_dict)   # copy.copy(...)
+                            self.update_record_text_info(self.new_pkg.info)   # copy.copy(...)
                             
                             if(self.record.is_recording):
-                                self.record.push_new_item()
+                                self.record.push_new_item(self.new_pkg.info)
                                 self.update_record_len_scrollbar_and_label()
                                 self.update_record_view_scrollbar_and_label()
                         
@@ -921,24 +906,44 @@ class IndoorLocation(QObject):
                 print(e)
     
     def update_record_graphic(self):
-        if (self.drawed_end != self.record.view_max) or (self.drawed_len != self.record.view_len):
+        fig_size = self.axes_2d_static.figure.get_size_inches() * self.axes_2d_static.figure.dpi
+        fig_w = fig_size[0]
+        fig_h = fig_size[1]
+        
+        if (self.drawed_end != self.record.view_max) or (self.drawed_len != self.record.view_len) or (self.drawed_w != fig_w) or (self.drawed_h != fig_h):
             
             # 清除当前绘图
             self.axes_2d_static.clear()
             
-            if self.record.view_len > 0:
-                # 取出需要绘制的数据包
-                records = self.record.items_list[self.record.view_min-1 : self.record.view_max]   # 需要绘制的所有记录
-                record = self.record.items_list[self.record.view_max - 1]                       # 需要绘制的最后一条记录
+            fig_size = self.axes_2d_static.figure.get_size_inches() * self.axes_2d_static.figure.dpi
+            fig_w = fig_size[0]
+            fig_h = fig_size[1]
             
+            self.drawed_w = fig_w
+            self.drawed_h = fig_h
+            self.drawed_end = self.record.view_max
+            self.drawed_len = self.record.view_len
+                
+            
+            if self.record.view_len > 0:
+                
+                # print(type(plt.get_current_fig_manager()), plt.get_current_fig_manager())
+                # print(str(plt.get_current_fig_manager()))
+                
                 # 绘制所有记录中 标签位置点
-                for i in range(self.record.view_len):
-                    a = 1.0 / self.record.view_len * i
-                    circle = plt.Circle((records[i]['x'], records[i]['y']), radius=3, color='c', ec='c', alpha=a, picker=5)
-                    self.axes_2d_static.add_artist(circle)
+                for k_pkg_id in range(self.record.view_min-1, self.record.view_max):
+                    pkg = self.record.items[k_pkg_id]
+                    
+                    for k_tag_id in self.record.items[k_pkg_id]['tags']:
+                        tag = pkg['tags'][k_tag_id]
+                        
+                        a = 1.0 / self.record.view_len * (k_pkg_id + 1 - self.record.view_min + 1)
+                        circle = plt.Circle((tag['x'], tag['y']), radius=3, color='c', ec='c', alpha=a, picker=5)
+                        self.axes_2d_static.add_artist(circle)
+                    
                 
                 # 更新数据包内容文本
-                self.update_record_item_info(record)
+                self.update_record_item_info(pkg)
                 
                 map = self.map.dict
                 # 绘制地图
@@ -949,26 +954,27 @@ class IndoorLocation(QObject):
                         cfg = map['cfg']                # 默认配置
                         if 'anchors' in map:
                             anchors = map['anchors']
-                            for k in anchors:
-                                anchor = anchors[k]
+                            
+                            # 绘制最后一条记录中 距离圆
+                            for k_d in pkg['tags'][k_tag_id]['d']:
+                                anchor = anchors[k_d]
                                 x, y = anchor['xy']
-                                
-                                # 绘制最后一条记录中 距离圆
-                                key_d = 'd%d' %(k)
-                                circle = plt.Circle((x, y), radius=record[key_d], color=anchor['c'], ec='c', alpha=cfg['distance']['a'], picker=5)
+                                r = pkg['tags'][k_tag_id]['d'][k_d]
+                                circle = plt.Circle((x, y), radius=r, color=anchor['c'], ec='c', alpha=cfg['distance']['a'], picker=5)
                                 circle.set_zorder(cfg['distance']['zo'])
                                 self.axes_2d_static.add_artist(circle)
                                 
-                                # 绘制最后一条记录中 信号圆
-                                key_r = 'r%d' %(k)
-                                circle = plt.Circle((x, y), radius=record[key_r], color=cfg['rssi']['c'], ec='c', alpha=cfg['rssi']['a'], picker=5)
+                            # 绘制最后一条记录中 信号圆
+                            for k_r in pkg['tags'][k_tag_id]['r']:
+                                anchor = anchors[k_r]
+                                x, y = anchor['xy']
+                                r = pkg['tags'][k_tag_id]['r'][k_r]
+                                circle = plt.Circle((x, y), radius=r, color=cfg['rssi']['c'], ec='c', alpha=cfg['rssi']['a'], picker=5)
                                 circle.set_zorder(cfg['rssi']['zo'])
                                 self.axes_2d_static.add_artist(circle)
-            
+                                
+            self.axes_2d_static.figure.tight_layout()
             self.axes_2d_static.figure.canvas.draw()    # 重新绘制
-            
-            self.drawed_end = self.record.view_max
-            self.drawed_len = self.record.view_len
 
 if __name__ == '__main__':
     app = QApplication([])
