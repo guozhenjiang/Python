@@ -1,0 +1,35 @@
+安装
+    pip install pyinstaller
+
+使用
+
+    先执行：(切换到 'utf-8' 编码格式)
+        chcp 65001
+
+    默认参数
+        pyinstaller ./main.py
+    
+    单个文件夹 -D
+        pyinstaller ./main.py -D
+
+    单个 exe -F
+        pyinstaller ./main.py -F
+    
+    添加图标 -i dir\ico.ico (dir 是路径 ico.ico 是图标文件)
+        pyinstaller ./main.py -F -i d:\pic\main.ico
+    
+    添加包路径 -p dir (dir 是路径)
+        pyinstaller ./main.py -F -i d:\pic\main.ico -p C:\Users\GuoZhenJiang\AppData\Roaming\Python\Python37\site-packages\PySide2
+        多个路径空格分开
+    
+    取消运行是的控制台窗口 -w
+        pyinstaller ./main.py -F -i d:\pic\main.ico -p C:\Users\GuoZhenJiang\AppData\Roaming\Python\Python37\site-packages\PySide2 -w
+    
+生成的 .exe 报错处理：
+1. 直接调用、引用、操作的文件放在同级目录下。
+2. 提示导入包错误 重新 加入参数 --hidden-import pkg 重新 pyinstaller (pkg 是对应的包名称)
+
+pyinstaller ./main.py -F -w -i D:\study\python\prj\idl\04_nT_nA_2D\ico\location_256x256.ico -p C:\Users\GuoZhenJiang\AppData\Roaming\Python\Python37\site-packages\PySide2 --hidden-import PySide2.QtXml
+
+经测试，这个就可以：
+pyinstaller ./main.py -F -w -i D:\study\python\prj\idl\04_nT_nA_2D\ico\location_256x256.ico --hidden-import PySide2.QtXml

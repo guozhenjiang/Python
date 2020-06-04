@@ -10,7 +10,7 @@ def time_stamp_ms():
     return stamp_ms_str
 
 print('\r\n____________________ %s ____________________' %(time_stamp_ms()))
-with open('./map/map hw_1T3A.txt', encoding='utf-8') as f:
+with open('./map/2d_room_hw.txt', encoding='utf-8') as f:
     t = f.read()
 
 print('读取的内容类型: ', type(t))

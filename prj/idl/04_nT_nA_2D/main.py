@@ -521,11 +521,12 @@ class IndoorLocation(QObject):
         
         if 'type' in map:
             if '2d' == map['type']:
-                cfg = map['cfg']                # 默认配置
+                cfg = map['cfg']            # 默认配置
             
                 fig_size = self.axes_2d_static.figure.get_size_inches() * self.axes_2d_static.figure.dpi
                 fig_w = fig_size[0]
                 fig_h = fig_size[1]
+                
                 fig_wh = fig_w / fig_h      # 宽高比 比值越大 越扁平 比值越小 越瘦高
                 
                 w, h, bp = map['size']      # 宽、高、边距比例
@@ -914,21 +915,17 @@ class IndoorLocation(QObject):
             
             # 清除当前绘图
             self.axes_2d_static.clear()
+            # print('重绘', time_stamp_ms())    # 打开此 log 调试有没有多余的绘图动作
+                
+            map = self.map.dict
+            # 绘制地图
+            self.draw_map(map, resize=False)
             
             fig_size = self.axes_2d_static.figure.get_size_inches() * self.axes_2d_static.figure.dpi
-            fig_w = fig_size[0]
-            fig_h = fig_size[1]
-            
-            self.drawed_w = fig_w
-            self.drawed_h = fig_h
-            self.drawed_end = self.record.view_max
-            self.drawed_len = self.record.view_len
-                
+            self.drawed_w = fig_size[0]
+            self.drawed_h = fig_size[1]
             
             if self.record.view_len > 0:
-                
-                # print(type(plt.get_current_fig_manager()), plt.get_current_fig_manager())
-                # print(str(plt.get_current_fig_manager()))
                 
                 # 绘制所有记录中 标签位置点
                 for k_pkg_id in range(self.record.view_min-1, self.record.view_max):
@@ -937,17 +934,13 @@ class IndoorLocation(QObject):
                     for k_tag_id in self.record.items[k_pkg_id]['tags']:
                         tag = pkg['tags'][k_tag_id]
                         
-                        a = 1.0 / self.record.view_len * (k_pkg_id + 1 - self.record.view_min + 1)
+                        a = 1.0 / self.record.view_len * (k_pkg_id + 1 - self.record.view_min + 1)      # 最近的点颜色更深
                         circle = plt.Circle((tag['x'], tag['y']), radius=3, color='c', ec='c', alpha=a, picker=5)
                         self.axes_2d_static.add_artist(circle)
                     
                 
                 # 更新数据包内容文本
                 self.update_record_item_info(pkg)
-                
-                map = self.map.dict
-                # 绘制地图
-                self.draw_map(map, resize=False)
                 
                 if 'type' in map:
                     if '2d' == map['type']:
@@ -972,6 +965,9 @@ class IndoorLocation(QObject):
                                 circle = plt.Circle((x, y), radius=r, color=cfg['rssi']['c'], ec='c', alpha=cfg['rssi']['a'], picker=5)
                                 circle.set_zorder(cfg['rssi']['zo'])
                                 self.axes_2d_static.add_artist(circle)
+                                
+                self.drawed_end = self.record.view_max
+                self.drawed_len = self.record.view_len
                                 
             self.axes_2d_static.figure.tight_layout()
             self.axes_2d_static.figure.canvas.draw()    # 重新绘制
