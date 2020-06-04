@@ -34,40 +34,6 @@
      <number>0</number>
     </property>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_7">
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>解析方式</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="comboBox_Mode">
-        <property name="currentIndex">
-         <number>0</number>
-        </property>
-        <item>
-         <property name="text">
-          <string>WangZeKun</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>DongHan</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
      <widget class="QTabWidget" name="tabWidget_Display">
       <property name="sizeIncrement">
        <size>
@@ -787,7 +753,7 @@ border-width: 1px</string>
     <set>QDockWidget::AllDockWidgetFeatures</set>
    </property>
    <property name="windowTitle">
-    <string>数据包</string>
+    <string>数据</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -795,7 +761,7 @@ border-width: 1px</string>
    <widget class="QWidget" name="widget_DockHex">
     <layout class="QVBoxLayout" name="verticalLayout_6">
      <item>
-      <widget class="QPlainTextEdit" name="plainTextEdit_Hex">
+      <widget class="QPlainTextEdit" name="plainTextEdit_Data">
        <property name="verticalScrollBarPolicy">
         <enum>Qt::ScrollBarAlwaysOn</enum>
        </property>
@@ -831,7 +797,7 @@ border-width: 1px</string>
     </property>
     <addaction name="action_ViewSet"/>
     <addaction name="action_ViewLog"/>
-    <addaction name="action_ViewHex"/>
+    <addaction name="action_ViewData"/>
     <addaction name="action_ViewInfo"/>
    </widget>
    <addaction name="menu_View"/>
@@ -844,7 +810,7 @@ border-width: 1px</string>
     </sizepolicy>
    </property>
    <property name="windowTitle">
-    <string>数据记录</string>
+    <string>记录</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -863,8 +829,23 @@ border-width: 1px</string>
         <string>地图</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_7">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <property name="sizeConstraint">
          <enum>QLayout::SetMinimumSize</enum>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
         </property>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -1064,8 +1045,23 @@ border-width: 1px</string>
         <string>记录</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_4">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <property name="sizeConstraint">
          <enum>QLayout::SetMinimumSize</enum>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
         </property>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -1263,6 +1259,175 @@ color: rgb(255, 0, 0);</string>
     <bool>true</bool>
    </property>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_2">
+   <property name="features">
+    <set>QDockWidget::NoDockWidgetFeatures</set>
+   </property>
+   <property name="windowTitle">
+    <string>命令</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout_8">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_7">
+       <property name="spacing">
+        <number>2</number>
+       </property>
+       <property name="sizeConstraint">
+        <enum>QLayout::SetMinimumSize</enum>
+       </property>
+       <item>
+        <widget class="QPushButton" name="pushButton_CmdInsertBefore">
+         <property name="minimumSize">
+          <size>
+           <width>30</width>
+           <height>35</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip">
+          <string>开始记录</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_CmdInsertAfter">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>30</width>
+           <height>35</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip">
+          <string>保存当前记录内容</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_CmdDelete">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>30</width>
+           <height>35</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip">
+          <string>播放选中的记录文件</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_CmdSave">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>30</width>
+           <height>35</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip">
+          <string>删除选中的记录文件</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_CmdDir">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>30</width>
+           <height>35</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip">
+          <string>删除选中的记录文件</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="tableWidget">
+       <column>
+        <property name="text">
+         <string>Hex</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>功能</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>值</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="action_ViewSet">
    <property name="checkable">
     <bool>true</bool>
@@ -1285,7 +1450,7 @@ color: rgb(255, 0, 0);</string>
     <string>Log</string>
    </property>
   </action>
-  <action name="action_ViewHex">
+  <action name="action_ViewData">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -1293,7 +1458,7 @@ color: rgb(255, 0, 0);</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Hex</string>
+    <string>Data</string>
    </property>
   </action>
   <action name="action_ViewAscii">

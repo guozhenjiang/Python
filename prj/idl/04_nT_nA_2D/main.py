@@ -28,8 +28,8 @@ import matplotlib.patches as mpatches
 
 import csv
 import pandas as pd
-
 from enum import Enum
+import json
 # endregion
 
 # region 基本公共方法
@@ -198,17 +198,24 @@ class IndoorLocation(QObject):
         self.log('加载界面文件 %s' %(f_ui_main))
         
         self.log('初始化图标')
-        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_256x256.png'))                            # 窗口图标
+        self.ui_main.setWindowIcon(QtGui.QPixmap(r'.\ico\location_512x512.png'))                            # 窗口图标
         self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\record_128x128_red_dot.png'))     # Record
         self.ui_main.pushButton_RecordSave.setIcon(QtGui.QPixmap(r'.\ico\save_256x256.png'))
-        self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play_256x256.png'))
-        self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_128x128.png'))
+        self.ui_main.pushButton_RecordPlay.setIcon(QtGui.QPixmap(r'.\ico\play_512x512.png'))
+        self.ui_main.pushButton_RecordDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_512x512.png'))
         self.ui_main.pushButton_RecordDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
-        self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))
-        self.ui_main.pushButton_MapRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_256x256.png'))             # Map
-        self.ui_main.pushButton_MapImport.setIcon(QtGui.QPixmap(r'.\ico\import_100x100.png'))
-        self.ui_main.pushButton_MapDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_128x128.png'))
+        self.ui_main.pushButton_RecordRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_512x512.png'))
+        
+        self.ui_main.pushButton_MapRefresh.setIcon(QtGui.QPixmap(r'.\ico\refresh_512x512.png'))             # Map
+        self.ui_main.pushButton_MapImport.setIcon(QtGui.QPixmap(r'.\ico\import_512x512'))
+        self.ui_main.pushButton_MapDelete.setIcon(QtGui.QPixmap(r'.\ico\delete_512x512.png'))
         self.ui_main.pushButton_MapDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
+        
+        self.ui_main.pushButton_CmdInsertBefore.setIcon(QtGui.QPixmap(r'.\ico\insert_row_before.png'))
+        self.ui_main.pushButton_CmdInsertAfter.setIcon(QtGui.QPixmap(r'.\ico\insert_row_after.png'))
+        self.ui_main.pushButton_CmdDelete.setIcon(QtGui.QPixmap(r'.\ico\row_delete_512x512.png'))
+        self.ui_main.pushButton_CmdSave.setIcon(QtGui.QPixmap(r'.\ico\save_256x256.png'))
+        self.ui_main.pushButton_CmdDir.setIcon(QtGui.QPixmap(r'.\ico\open_dir_256x256.png'))
         
         self.log('加载自定义控件 端口选择')
         self.ui_main.comboBox_name_raw.deleteLater()                                  # 删掉 UI 生成的端口选择下拉框控件
@@ -230,8 +237,6 @@ class IndoorLocation(QObject):
         # 添加 matplotlib 工具栏是有效的 只不过添加后部分功能没有
         self.ui_main.toolbar = NavigationToolbar(self.canvas_2d_matplotlib, self.ui_main)
         self.ui_main.verticalLayout_2D_Matplotlib.addWidget(self.ui_main.toolbar)
-        
-        self.slot_mode_changed()
     
     def init_ui_record_view(self):
         # 删掉 Designer 生成的滑块 重写一个 占据相同的位置
@@ -326,7 +331,7 @@ class IndoorLocation(QObject):
         
         ui.action_ViewSet.changed.connect(                                  lambda:self.slot_dock_show_hide(ui.dockWidget_Set, ui.action_ViewSet.isChecked()))
         ui.action_ViewLog.changed.connect(                                  lambda:self.slot_dock_show_hide(ui.dockWidget_Log, ui.action_ViewLog.isChecked()))
-        ui.action_ViewHex.changed.connect(                                  lambda:self.slot_dock_show_hide(ui.dockWidget_Pkg, ui.action_ViewHex.isChecked()))
+        ui.action_ViewData.changed.connect(                                  lambda:self.slot_dock_show_hide(ui.dockWidget_Pkg, ui.action_ViewData.isChecked()))
         ui.action_ViewInfo.changed.connect(                                 lambda:self.slot_dock_show_hide(ui.dockWidget_Info, ui.action_ViewInfo.isChecked()))
         
         ui.dockWidget_Set.visibilityChanged.connect(                        lambda visable:self.slot_win_set_visibility_changed(visable))
@@ -350,7 +355,6 @@ class IndoorLocation(QObject):
         ui.pushButton_PortOpenClose.clicked.connect(                        lambda:self.slot_port_open_close())
         ui.pushButton_CleanReceive.clicked.connect(                         lambda:self.slot_clean_receive())
         ui.pushButton_StartSend.clicked.connect(                            lambda:self.slot_send())
-        ui.comboBox_Mode.currentTextChanged.connect(                        lambda:self.slot_mode_changed())
         
         ui.pushButton_RecordStart.clicked.connect(                          lambda:self.slot_record_start_stop())
         ui.pushButton_RecordSave.clicked.connect(                           lambda:self.slot_record_save())
@@ -377,12 +381,9 @@ class IndoorLocation(QObject):
         if(self.record.is_recording):
             self.ui_cnt_recording += 1
             if(1 == self.ui_cnt_recording % 2):
-                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_green.png'))
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_512x512_gray.png'))
             elif(0 == self.ui_cnt_recording % 2):
-                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_256x256_red.png'))
-    
-    def slot_mode_changed(self):
-        self.log('模式切换到 %s' %(self.ui_main.comboBox_Mode.currentText()))
+                self.ui_main.pushButton_RecordStart.setIcon(QtGui.QPixmap(r'.\ico\stop_512x512_red.png'))
     
     def slot_record_start_stop(self):
         self.record.is_recording = not self.record.is_recording
@@ -402,7 +403,7 @@ class IndoorLocation(QObject):
             self.update_dynamic_ui()
             
             self.update_record_value_and_label(0, 0, 0)
-            self.ui_main.plainTextEdit_Hex.clear()
+            self.ui_main.plainTextEdit_Data.clear()
             
         # 记录结束
         else:
@@ -430,8 +431,15 @@ class IndoorLocation(QObject):
         self.record.txt['map'] = self.map.f_path_name
         self.record.txt['items'] = self.record.items
         
+        # # json 的 key 必须是 双引号括起来的字符串
+        # json_data = json.dumps(self.record.txt, sort_keys=True, indent=4, separators=(',', ': '))
+        # print(time_stamp_ms())
+        # print(type(json_data))
+        # print(json_data)
+        
         with open(f_record, 'w', encoding='utf-8') as f:
             f.write(str(self.record.txt))
+            # f.write(json_data)
         
         self.slot_record_refresh()
         self.ui_main.pushButton_RecordSave.setEnabled(False)
@@ -485,6 +493,14 @@ class IndoorLocation(QObject):
         
         self.update_record_len_scrollbar_and_label()
         self.update_record_view_scrollbar_and_label()
+        
+        self.ui_main.plainTextEdit_Data.clear()
+        self.ui_main.plainTextEdit_Data.appendPlainText('数据:')
+        for k in self.record.items:
+            self.ui_main.plainTextEdit_Data.appendPlainText(str(self.record.items[k]).replace('\'', ''))
+        
+        self.ui_main.plainTextEdit_Data.appendPlainText('地图:')
+        self.ui_main.plainTextEdit_Data.appendPlainText(str(self.map.f_path_name))
         
         if '' != self.map.f_path_name:
             self.slot_map_import()
@@ -732,7 +748,7 @@ class IndoorLocation(QObject):
         self.ui_main.action_ViewLog.setChecked(visable)
     
     def slot_win_hex_visibility_changed(self, visable):
-        self.ui_main.action_ViewHex.setChecked(visable)
+        self.ui_main.action_ViewData.setChecked(visable)
     
     def slot_win_info_visibility_changed(self, visable):
         self.ui_main.action_ViewInfo.setChecked(visable)
@@ -835,12 +851,8 @@ class IndoorLocation(QObject):
             self.log('端口关闭')
     
     def slot_clean_receive(self):
-        self.ui_main.plainTextEdit_Hex.clear()
-        
-        self.slot_mode_changed()
-        
+        self.ui_main.plainTextEdit_Data.clear()
         self.port.read_id = 0
-        
         self.log('清空接收')
     
     def slot_send(self):
@@ -869,7 +881,7 @@ class IndoorLocation(QObject):
     
     def update_record_text_info(self, info):
         text = str(info).replace('\'', '')
-        self.ui_main.plainTextEdit_Hex.appendPlainText(str(info).replace('\'', ''))
+        self.ui_main.plainTextEdit_Data.appendPlainText(str(info).replace('\'', ''))
     
     def update_record_item_info(self, info):
         self.ui_main.lineEdit_PkgRaw.setText(str(info['raw']))
