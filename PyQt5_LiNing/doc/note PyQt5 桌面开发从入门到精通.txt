@@ -1,0 +1,145 @@
+
+视频教程:
+    https://www.bilibili.com/video/BV1tV41167k1
+    P001 ~ P141
+    PyQt5 开发与实战
+    Windows 和 Mac OS X 双系统演示
+    讲师：李宁
+    (网易云课堂)
+
+
+P001 PyQt5 基础知识
+    Qt
+        C++ 编写的跨平台 GUI 库
+        挪威 Trolltech(奇趣科技)开发的
+        2008.06 Trolltech 被 Nokia(诺基亚)收购
+        2012.08 Digia 从 Nokia 收购了 Qt 业务
+
+    PyQt
+        将 Python 与 Qt 库融为一体，保留了 Qt 高运行效率，大大提高了开发效率
+
+    PyQt5
+        目前最新的 Pyqt 版本是 5.xx 所以习惯上称为 PyQt5
+
+    课程内容
+        Qt Designer
+        PyQt5 基本窗口控件(QMainWindow、Qwdiget、Qlabel、QLineEdit、菜单、工具栏等)
+        PyQt5 高级组件(QTableView、QListView、容器、多线程等)
+        PyQt5 布局管理(QBoxLayout、QGridLayout、QFormLayout、嵌套布局等)
+        PyQt5 信号与槽(事件处理、数据传递等)
+        PyQt5 图形与特效(定制窗口风格、绘图、QSS 与 UI 美化、不规则窗口、设置样式等)
+        PyQt5 扩展应用(制作 PyQt5 安装程序、数据处理、第三方会图库在 PyQt5 中的应用、UI 自动化测试等)
+
+P002 搭建 PyQt5 开发环境
+    1. 开发环境搭建
+        Python(Anaconda)
+        PyQt5
+        PyCharm
+
+P003 开发第一个基于 PyQt5 的桌面应用
+    必须的两个类
+        PyQt5.QWidgets.QApplication
+        PyQt5.QWidgets.QWidget
+
+P004 安装和配置 QtDesigner
+    File -> Setting -> Tools -> External Tools -> 点击 + 创建 或 双击进入编辑
+		// Anaconda 版可查看 cpp 源码 无法查看 Python 源码
+		Name:				QtDesigner Anaconda
+		Program:			C:\ProgramData\Anaconda3\Library\bin\designer.exe
+		Working directory:	$ProjectFileDir$
+		
+		// PySid2 版可查看 cpp 源码和 Python 源码
+		Name:				QtDesigner PySid2
+		Program:			C:\Users\GuoZhenJiang\AppData\Roaming\Python\Python37\site-packages\PySide2\designer.exe
+		Working directory:	$ProjectFileDir$
+
+P005 QtDesigner 快速入门
+
+P006 将 ui 文件生成 py 文件
+	方法一(命令行):
+		1. 使用 cd 命令切换到要转换的 .ui 文件所在目录
+		2. 使用 python -m PyQt5.uic.pyuic .\myui.ui -o mypy.py (将 myui.ui 转换为 mypy.py)
+		
+	方法二(通过 PyCharm 外部工具自动传参处理):
+		1. File -> Setting -> Tools -> External Tools -> 点击 + 创建 或 双击进入编辑
+			// Anaconda 版可查看 cpp 源码 无法查看 Python 源码
+			Name:				PyUIC
+			Program:			C:\ProgramData\Anaconda3\envs\python38\Scripts\pyuic5.exe
+			Arguments:			$FileName$ -o $FileNameWithoutExtension$.py
+			Working directory:	$FileDir$
+		
+		2. 然后在 PyCharm 中在要转换的 .ui 文件上右键选择对应命令即可完成转换
+
+P007 在 QtDesigner 中使用水平布局
+    1. 放置空间后选中，右键，布局，使用水平布局
+    2. 先放置水平布局框，再往水平布局框里拖放控件
+
+    3. 将 .ui 文件转换为 .py 文件
+        方法一:
+            python -m PyQt5.uic.pyuic demo.ui -o demo.py
+
+        方法二:
+            pyuic5
+
+    43. Qt Designer 中可以预览 cpp 源码和 python 源码
+        菜单栏
+        窗体
+            View C++ Code
+            View Python Code
+
+        当无法预览 按照提示找到 uic.exe 文件,
+        并将同路径下的其他文件一同复制到提示指定的路径(没有就新建)
+
+P008 在 QtDesigner 中使用垂直布局
+
+P011 在 QtDesigner 中同时使用水平布局和垂直栅格布局
+
+P012 向栅格布局中拖动控件
+
+P009 向栅格布局中拖动控件
+
+P010 在 QtDesigner 中同时使用水平布局和垂直布局
+
+P013 在 QtDesigner 中使用表单布局
+
+P014 在容器中完成布局
+
+P015 在 QtDesigner 中使用绝对布局
+    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple PyQtWebEngine
+
+P016 在 QtDesigner 中使用分割线与间隔
+
+P017 控件尺寸的最大值和最小值
+
+P018 尺寸策略(SizePolicy)
+    SizePolicy  尺寸策略
+    sizeHint    期望尺寸
+        对大多数控件而言， sizeHint 是只读的(不可设置)
+
+        self.pushButton.sizeHint().width()
+        self.pushButton.sizeHint().height()
+
+P019 设置控件之间的伙伴关系
+
+P020 修改控件的 Tab 顺序
+
+P021 在 QtDesigner 中完成信号与槽的设置
+    signal
+    slot
+
+    一个信号可以触发多个槽函数
+    一个槽函数可以接收多个信号
+
+P022 在 QtDesigner 中为窗口添加菜单和工具栏
+
+P023 创建主窗口(介绍窗口类型)
+    主窗口类型
+        QMainWindow     菜单栏、工具栏、状态栏、标题栏
+        Qwdiget         不确定窗口的用途，就用 QWidget
+        QDialog         没有菜单栏、工具栏、状态栏
+
+P024 让主窗口居中显示
+    QDesktopWidget
+
+P025 退出应用程序
+

@@ -1,0 +1,24 @@
+
+从清华镜像网站安装：
+	pip install -i https://pypi.tuna.tsinghua.edu.cn/simple xxx
+
+更新 pip
+	C:\ProgramData\Anaconda3\python.exe -m pip install --upgrade pip
+
+PyCharm + Anaconda 添加 PyQt5
+    1. 设置项目解释器
+    2. 在 PyCharm Terminal 中
+        pip install sip
+        pip install PyQt5
+		pip install PyQt5-tools
+		pip install PyQt5-tools -i http://pypi.douban.com/simple --trusted-host=pypi.douban.com
+		pip install PyQt5-stubs
+
+		pip install --user -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip
+
+		pip install -i https://pypi.tuna.tsinghua.edu.cn/simple PyQtWebEngine
+
+		# from PyQt5 import QtWebKitWidgets
+		# from PyQt5 import QtWebEngineWidgets
+		from PyQt5.QtWebEngineWidgets import *
+
