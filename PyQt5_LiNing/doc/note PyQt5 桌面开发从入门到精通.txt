@@ -143,3 +143,45 @@ P024 让主窗口居中显示
 
 P025 退出应用程序
 
+P026 屏幕坐标系
+    print("1")
+    print("widget.x() = %d" %widget.x())            # 窗口横坐标
+    print("widget.y() = %d" %widget.y())            # 窗口纵坐标
+    print("widget.width() = %d" %widget.width())    # 工作区宽度
+    print("widget.height() = %d" %widget.height())  # 工作区宽度
+
+    print("2")
+    print("widget.geometry().x() = %d" %widget.geometry().x())              # 工作区横坐标
+    print("widget.geometry().y() = %d" %widget.geometry().y())              # 工作区纵坐标
+    print("widget.geometry().width() = %d" %widget.geometry().width())      # 工作区宽度
+    print("widget.geometry().height() = %d" %widget.geometry().height())    # 工作区高度
+
+    print("3")
+    print("widget.frameGeometry().x() = %d" %widget.frameGeometry().x())            # 窗口横坐标
+    print("widget.frameGeometry().y() = %d" %widget.frameGeometry().y())            # 窗口纵坐标
+    print("widget.frameGeometry().width() = %d" %widget.frameGeometry().width())    # 窗口宽度
+    print("widget.frameGeometry().height() = %d" %widget.frameGeometry().height())  # 窗扣高度
+
+P027 设置窗口和应用程序图标
+    '''
+    窗口的 setWindowIcon 方法用于设置窗口的图标，只在 Windows 中可用
+    QApplication 中的 setWindowIcon 方法用于设置主窗口的图标和应用程序图标，但调用了窗口的 setWindowIcon 方法
+    QApplication 中的 setWindowIcon 方法就只能用于设置应用程序图标了
+    '''
+
+P028 为控件添加提示信息
+
+P029 QLabel 控件的基本用法
+    '''
+    setAlignment()      # 设置文本的对齐方式
+    setIndent()         # 设置文本缩进
+    text()              # 获取文本内容
+    setBuddy()          # 设置伙伴关系
+    setText()           # 设置文本内容
+    selectedText()      # 返回所选择的字符
+    setWordWrap()       # 设置是否允许换行
+
+    QLabel 常用的信号(事件):
+    1. 当鼠标滑过 QLabel 控件时触发 linkHovered
+    2. 当鼠标单击 QLabel 控件时触发 linkActivated
+    '''
