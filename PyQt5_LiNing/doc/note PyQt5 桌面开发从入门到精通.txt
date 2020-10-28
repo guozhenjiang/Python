@@ -185,3 +185,24 @@ P029 QLabel 控件的基本用法
     1. 当鼠标滑过 QLabel 控件时触发 linkHovered
     2. 当鼠标单击 QLabel 控件时触发 linkActivated
     '''
+
+P030 QLabel 与伙伴控件
+    layout.addwidget(控件对象， rowIdx, colIdx, rowSpan, colSpan)
+
+P031 QLineEdit 控件与回显模式(EchoMode)
+    QLineEdit:
+        基本功能：输入单行的文本
+        高级功能：4 种回显功能：
+            1. Normal 正常模式
+            2. NoEcho 没有回显
+            3. Password
+            4. PasswordEchoOnEdit
+
+P032 限制 QLineEdit 控件的输入(校验器)
+    限制只能输入整数、浮点数 或满足一定条件的字符串
+
+
+
+
+
+
