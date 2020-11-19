@@ -223,3 +223,19 @@ P034 QLineEdit 控件综合案例
 
 P035 使用 QTextEdit 控件输入多行文本
 
+P036 按钮控件(QPushButton)
+    QAbstractButton
+
+    QPushButton
+    AToolButton
+    QRadioButton
+    QCheckBox
+
+P037 单选按钮控件(QRadioButton)
+
+P038 复选框控件(QCheckBox)
+    未选中
+    半选中
+    选中
+
+
